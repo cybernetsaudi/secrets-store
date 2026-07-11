@@ -7,11 +7,11 @@
 
 set -euo pipefail
 
-REPO="iwaqasmaqbool/secrets-store"
+REPO="cybernetsaudi/secrets-store"
 SSH_PASS="${SSH_PASS:-}"
 
-if ! gh auth status -h github.com 2>&1 | grep -q 'iwaqasmaqbool'; then
-  echo "Log in as iwaqasmaqbool first: gh auth login -h github.com" >&2
+if ! gh auth status -h github.com 2>&1 | grep -q 'cybernetsaudi'; then
+  echo "Log in as cybernetsaudi first: gh auth login -h github.com" >&2
   exit 1
 fi
 
@@ -43,4 +43,4 @@ sshpass -p "$SSH_PASS" ssh -p 65002 -o StrictHostKeyChecking=no u950050130@145.7
 echo "Triggering test workflow..."
 gh workflow run deploy.yml --repo "$REPO" -f reason="Initial setup test deploy"
 
-echo "Done. Watch: https://github.com/iwaqasmaqbool/secrets-store/actions"
+echo "Done. Watch: https://github.com/cybernetsaudi/secrets-store/actions"

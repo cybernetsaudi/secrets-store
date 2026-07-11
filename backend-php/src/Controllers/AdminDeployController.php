@@ -7,7 +7,7 @@ use App\Models\Setting;
 
 class AdminDeployController
 {
-    private const GITHUB_OWNER = 'iwaqasmaqbool';
+    private const GITHUB_OWNER = 'cybernetsaudi';
     private const GITHUB_REPO = 'secrets-store';
     private const GITHUB_WORKFLOW = 'deploy.yml';
     private const GITHUB_BRANCH = 'main';

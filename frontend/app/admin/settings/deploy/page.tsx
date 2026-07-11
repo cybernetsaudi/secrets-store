@@ -421,7 +421,7 @@ export default function DeployPage() {
           <p className="text-stone-300 text-sm mb-2">
             The following secrets must be set in{' '}
             <a
-              href="https://github.com/iwaqasmaqbool/secrets-store/settings/secrets/actions"
+              href="https://github.com/cybernetsaudi/secrets-store/settings/secrets/actions"
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-400 underline"
