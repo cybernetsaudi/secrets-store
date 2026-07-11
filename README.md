@@ -12,6 +12,10 @@ Admin panel → Settings → Deploy → Rebuild, or run the workflow manually:
 
 Required repository secrets: `SSH_HOST`, `SSH_PORT`, `SSH_PASS`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (optional).
 
+**Note:** Hostinger often blocks SSH from GitHub’s cloud runners (connection timeout). If Actions deploy fails, use the local script below or add a [self-hosted runner](https://docs.github.com/en/actions/hosting-your-own-runners).
+
+Repository: https://github.com/cybernetsaudi/secrets-store
+
 ### Local script
 
 ```bash
