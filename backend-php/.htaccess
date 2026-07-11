@@ -1,0 +1,30 @@
+RewriteEngine On
+RewriteBase /api/
+
+# Redirect to index.php for API routes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.tabby.ai https://api.stripe.com;"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    # Block access to error logs
+    <FilesMatch "^(error_log|\.env)$">
+        Header set X-Robots-Tag "noindex, nofollow"
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# PHP settings
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 10M
+    php_value post_max_size 10M
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>
+

@@ -1,0 +1,49 @@
+# Frontend directory configuration
+Options -Indexes
+
+# Allow access to all files
+Order allow,deny
+Allow from all
+
+# Set proper MIME types
+<IfModule mod_mime.c>
+    AddType text/css .css
+    AddType application/javascript .js
+    AddType application/json .json
+    AddType font/woff2 .woff2
+    AddType font/woff .woff
+    AddType font/ttf .ttf
+    AddType font/eot .eot
+    AddType image/svg+xml .svg
+</IfModule>
+
+# Default to index.html in out/ directory
+DirectoryIndex out/index.html index.html index.php
+
+# Rewrite Engine
+RewriteEngine On
+RewriteBase /frontend/
+
+# CRITICAL: If the physical file exists, serve it directly (no rewrite)
+# This handles _next/ files and all other static assets
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^(.*)$ - [L]
+
+# If requesting root of /frontend/, serve from out/index.html
+RewriteRule ^/?$ out/index.html [L]
+
+# Serve files from out/ directory if they exist there
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/frontend/out%{REQUEST_URI} -f
+RewriteRule ^(.*)$ out/$1 [L]
+
+# For Next.js static export, handle client-side routing by serving index.html
+# This handles routes like /frontend/out/admin/dashboard/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} ^/frontend/out/
+RewriteRule ^(.*)$ out/index.html [L]
+
+

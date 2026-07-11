@@ -1,0 +1,58 @@
+# Gulf United FC E-Commerce Store
+# Root .htaccess configuration
+
+RewriteEngine On
+RewriteBase /
+
+# CRITICAL: API routes MUST come first, before any other rules
+# Route all /api/* requests to api/index.php (except uploads which are served directly)
+RewriteCond %{REQUEST_URI} ^/api/uploads/
+RewriteRule ^api/uploads/(.*)$ api/uploads/index.php [QSA,L]
+
+# Route other /api/* requests to api/index.php
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+
+# Root path: serve Next.js store (index.html) directly — no GUFC-verse landing page
+RewriteCond %{REQUEST_URI} ^/?$
+RewriteCond %{DOCUMENT_ROOT}/index.html -f
+RewriteRule ^$ /index.html [L]
+
+# If the request is for an existing file, serve it directly
+# This handles _next/ static assets, CSS, JS, images, etc.
+# (root index.html handled above)
+RewriteCond %{REQUEST_URI} !^/$
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# If the request is for an existing directory WITH index.html, serve it explicitly
+# This ensures directories like /checkout/ serve their index.html correctly
+RewriteCond %{REQUEST_URI} !^/$
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}index.html -f
+RewriteRule ^(.*)/?$ %{REQUEST_URI}index.html [L]
+
+# If the request is for an existing directory WITHOUT index.html, stop processing
+# This comes AFTER product route check
+RewriteCond %{REQUEST_URI} !^/$
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Frontend routes - serve index.html for client-side routing
+# Exclude API, root path, and existing files
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{REQUEST_URI} !^/$
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.html [L]
+
+# Default index - store (Next.js) is the main site
+DirectoryIndex index.html index.php
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+

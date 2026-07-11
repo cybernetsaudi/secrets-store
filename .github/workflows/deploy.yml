@@ -1,0 +1,95 @@
+name: Build and Deploy Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for deployment"
+        required: false
+        default: "Manual rebuild triggered from admin panel"
+
+jobs:
+  build-and-deploy:
+    name: Build Next.js and Deploy to Hostinger
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Next.js static export
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+        run: npm run build
+
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass rsync
+
+      - name: Deploy frontend to Hostinger
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PASS: ${{ secrets.SSH_PASS }}
+        run: |
+          sshpass -p "$SSH_PASS" rsync -avz --delete \
+            -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='api/' \
+            --exclude='.htaccess' \
+            frontend/out/ \
+            $SSH_HOST:~/domains/secrets.gatvia.com/public_html/
+
+      - name: Deploy .htaccess
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PASS: ${{ secrets.SSH_PASS }}
+        run: |
+          sshpass -p "$SSH_PASS" rsync -avz \
+            -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" \
+            public_html/.htaccess \
+            $SSH_HOST:~/domains/secrets.gatvia.com/public_html/.htaccess
+
+      - name: Deploy PHP backend
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PASS: ${{ secrets.SSH_PASS }}
+        run: |
+          sshpass -p "$SSH_PASS" rsync -avz \
+            -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='*.md' \
+            --exclude='tests' \
+            --exclude='.env' \
+            --exclude='.env.example' \
+            --exclude='vendor' \
+            backend-php/ \
+            $SSH_HOST:~/domains/secrets.gatvia.com/public_html/api/
+
+      - name: Run composer install on server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PASS: ${{ secrets.SSH_PASS }}
+        run: |
+          sshpass -p "$SSH_PASS" ssh -p $SSH_PORT -o StrictHostKeyChecking=no $SSH_HOST \
+            "cd ~/domains/secrets.gatvia.com/public_html/api && composer install --no-dev --optimize-autoloader"
+
+      - name: Deployment complete
+        run: echo "✅ secrets.gatvia.com deployment complete!"
