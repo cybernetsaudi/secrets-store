@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Auth;
+use App\Migrations\VariantDimensionsMigration;
 use App\Models\Setting;
 
 class AdminDeployController
@@ -319,23 +320,15 @@ class AdminDeployController
             return ['error' => 'Authentication required'];
         }
 
-        $script = dirname(__DIR__, 2) . '/scripts/migrate_variant_dimensions.php';
-        if (!is_file($script)) {
-            http_response_code(500);
-            return ['error' => 'Migration script not found on server'];
-        }
+        // Run in-process — Hostinger shared hosting often disables exec()/shell_exec().
+        $result = VariantDimensionsMigration::run();
+        $text = trim($result['output'] ?? '');
 
-        $output = [];
-        $exitCode = 0;
-        exec('php ' . escapeshellarg($script) . ' 2>&1', $output, $exitCode);
-        $text = trim(implode("\n", $output));
-
-        if ($exitCode !== 0) {
+        if (!$result['success']) {
             http_response_code(500);
             return [
-                'error' => 'Migration failed',
+                'error' => $result['error'] ?? 'Migration failed',
                 'output' => $text,
-                'exit_code' => $exitCode,
             ];
         }
 

@@ -275,9 +275,10 @@ export default function DeployPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok && data.success) {
-        toast.success('Database migration completed.')
+        toast.success(data.message || 'Database migration completed.')
       } else {
-        toast.error(data.error || 'Migration failed')
+        const detail = [data.error, data.output].filter(Boolean).join(' — ')
+        toast.error(detail || 'Migration failed', { duration: 10000 })
       }
     } catch {
       toast.error('Network error running migration')
