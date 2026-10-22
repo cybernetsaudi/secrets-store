@@ -178,6 +178,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/settings/visual/', label: '  → Visual Settings', icon: '🎨' },
     { href: '/admin/settings/payment-gateways/', label: 'Payment Gateways', icon: '💳' },
     { href: '/admin/settings/password/', label: 'Change Password', icon: '🔒' },
+    { href: '/admin/settings/deploy/#db-migration', label: 'DB Migration', icon: '🗄️' },
     { href: '/admin/settings/deploy/', label: 'Rebuild Store', icon: '🔁' },
   ]
 

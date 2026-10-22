@@ -419,6 +419,25 @@ export default function DeployPage() {
           </button>
         </div>
 
+        {/* DB migration — keep near top so it is easy to find */}
+        <div
+          id="db-migration"
+          className="bg-violet-900/25 border-2 border-violet-500/40 rounded-xl p-6 mb-6 scroll-mt-6"
+        >
+          <h2 className="text-lg font-semibold text-white mb-1">🗄️ Database migration</h2>
+          <p className="text-stone-300 text-sm mb-4">
+            Run this once after a deploy (safe to repeat). Adds product variant columns for color / size / cup SKUs.
+          </p>
+          <button
+            type="button"
+            onClick={handleRunMigrations}
+            disabled={migratingDb}
+            className="px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+          >
+            {migratingDb ? 'Running migration…' : 'Run DB migration'}
+          </button>
+        </div>
+
         {/* Info cards */}
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="bg-stone-800/30 border border-stone-700/30 rounded-lg p-4">
@@ -465,21 +484,6 @@ export default function DeployPage() {
             <div><span className="text-yellow-400">NEXT_PUBLIC_API_URL</span> = https://secrets.gatvia.com/api</div>
             <div><span className="text-yellow-400">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</span> = pk_live_...</div>
           </div>
-        </div>
-
-        <div className="bg-stone-800/30 border border-stone-700/30 rounded-lg p-4 mb-4">
-          <h2 className="text-sm font-semibold mb-2 text-white">🗄️ After FTPS deploy</h2>
-          <p className="text-stone-400 text-xs mb-3">
-            GitHub cannot SSH into Hostinger. After a successful build, run the variant DB migration once (safe to repeat).
-          </p>
-          <button
-            type="button"
-            onClick={handleRunMigrations}
-            disabled={migratingDb}
-            className="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
-          >
-            {migratingDb ? 'Running migration…' : 'Run DB migration'}
-          </button>
         </div>
 
         {/* GitHub Token section */}
