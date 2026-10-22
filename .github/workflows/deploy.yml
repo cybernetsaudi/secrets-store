@@ -54,12 +54,15 @@ jobs:
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PASS: ${{ secrets.SSH_PASS }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_REMOTE_ROOT: ${{ secrets.FTP_REMOTE_ROOT }}
         run: |
-          if [ -z "${SSH_PASS}" ]; then
-            echo "Missing secret: SSH_PASS (also used as FTP password)"
+          DEPLOY_PASS="${FTP_PASS:-${SSH_PASS}}"
+          if [ -z "${DEPLOY_PASS}" ]; then
+            echo "Missing secret: set FTP_PASS (Hostinger FTP password from hPanel → FTP Accounts)."
+            echo "SSH_PASS alone is not used unless FTP_PASS is unset."
             exit 1
           fi
           HOST="${FTP_HOST}"
@@ -73,10 +76,16 @@ jobs:
             HOST="${SSH_HOST#*@}"
           fi
           REMOTE="${FTP_REMOTE_ROOT:-domains/secrets.gatvia.com/public_html}"
+          echo "::add-mask::${DEPLOY_PASS}"
+          echo "FTP_DEPLOY_PASSWORD=${DEPLOY_PASS}" >> "$GITHUB_ENV"
           echo "FTP_HOST=${HOST}" >> "$GITHUB_ENV"
           echo "FTP_USER=${USER}" >> "$GITHUB_ENV"
           echo "FTP_REMOTE_ROOT=${REMOTE}" >> "$GITHUB_ENV"
-          echo "Using FTPS ${USER}@${HOST} → ${REMOTE}"
+          if [ -n "${FTP_PASS}" ]; then
+            echo "Using FTPS ${USER}@${HOST} → ${REMOTE} (FTP_PASS secret)"
+          else
+            echo "Using FTPS ${USER}@${HOST} → ${REMOTE} (SSH_PASS fallback — set FTP_PASS if login fails)"
+          fi
 
       - name: Include Apache rules in static export
         run: cp public_html/.htaccess frontend/out/.htaccess
@@ -86,7 +95,7 @@ jobs:
         with:
           server: ${{ env.FTP_HOST }}
           username: ${{ env.FTP_USER }}
-          password: ${{ secrets.SSH_PASS }}
+          password: ${{ env.FTP_DEPLOY_PASSWORD }}
           port: 21
           protocol: ftps
           local-dir: frontend/out/
@@ -102,7 +111,7 @@ jobs:
         with:
           server: ${{ env.FTP_HOST }}
           username: ${{ env.FTP_USER }}
-          password: ${{ secrets.SSH_PASS }}
+          password: ${{ env.FTP_DEPLOY_PASSWORD }}
           port: 21
           protocol: ftps
           local-dir: backend-php/

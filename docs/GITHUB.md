@@ -48,11 +48,12 @@ Set under **cybernetsaudi/secrets-store** → Settings → Secrets:
 
 - `SSH_HOST` — `u950050130@145.79.209.14`
 - `SSH_PORT` — `65002`
-- `SSH_PASS` — Hostinger password
+- `SSH_PASS` — Hostinger **SSH** password (local deploy / server token update)
+- **`FTP_PASS`** — Hostinger **FTP** password (hPanel → Files → FTP Accounts). **Required for Actions deploy** if it differs from SSH (common). Workflow uses `FTP_PASS` first, then falls back to `SSH_PASS`.
 - `NEXT_PUBLIC_API_URL` — `https://secrets.gatvia.com/api`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — optional
 
-Deploy uses **FTPS** via `SamKirkland/FTP-Deploy-Action` (GitHub runners cannot SSH/rsync to Hostinger).
+Deploy uses **FTPS** via `SamKirkland/FTP-Deploy-Action` (GitHub runners cannot SSH/rsync to Hostinger). A failed deploy with `530 Login incorrect` almost always means `FTP_PASS` / `SSH_PASS` does not match the FTP account password in hPanel.
 
 Optional secrets (if not using `SSH_HOST=u950050130@145.79.209.14`):
 

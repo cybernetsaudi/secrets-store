@@ -69,8 +69,8 @@ function DeploymentModal({
     { label: 'Queued on GitHub Actions', threshold: 0 },
     { label: 'Installing Node.js + deps', threshold: 20 },
     { label: 'Building Next.js (npm run build)', threshold: 60 },
-    { label: 'Uploading files via SSH', threshold: 180 },
-    { label: 'Running composer install', threshold: 250 },
+    { label: 'Uploading site via FTPS', threshold: 180 },
+    { label: 'Uploading PHP API via FTPS', threshold: 250 },
     { label: 'Finalizing deployment', threshold: 300 },
   ]
 
@@ -457,7 +457,8 @@ export default function DeployPage() {
           <div className="font-mono text-xs bg-stone-900/50 rounded p-3 space-y-1 text-stone-300">
             <div><span className="text-yellow-400">SSH_HOST</span>  = u950050130@145.79.209.14</div>
             <div><span className="text-yellow-400">SSH_PORT</span>  = 65002</div>
-            <div><span className="text-yellow-400">SSH_PASS</span>  = (Hostinger password — also used for FTPS)</div>
+            <div><span className="text-yellow-400">SSH_PASS</span>  = Hostinger SSH password</div>
+            <div><span className="text-yellow-400">FTP_PASS</span>  = Hostinger FTP password (hPanel → FTP Accounts; fixes 530 login errors)</div>
             <div><span className="text-yellow-400">FTP_REMOTE_ROOT</span> = domains/secrets.gatvia.com/public_html (optional)</div>
             <div><span className="text-yellow-400">NEXT_PUBLIC_API_URL</span> = https://secrets.gatvia.com/api</div>
             <div><span className="text-yellow-400">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</span> = pk_live_...</div>
@@ -491,7 +492,9 @@ export default function DeployPage() {
             </button>
           </div>
           <p className="text-stone-400 text-xs mb-3">
-            The GitHub token allows this admin panel to trigger GitHub Actions builds. It is stored securely in the server database (never in the code).
+            Use a Personal Access Token from the <strong className="text-stone-300">cybernetsaudi</strong> GitHub account
+            (repo <code className="text-stone-400">cybernetsaudi/secrets-store</code>). Do not use iwaqasmaqbool for Secrets.
+            Stored securely in the server database (never in the code).
           </p>
           {showTokenSection && (
             <div className="flex gap-2">

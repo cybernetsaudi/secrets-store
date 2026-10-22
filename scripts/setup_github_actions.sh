@@ -1,14 +1,16 @@
 #!/bin/bash
-# Run AFTER: gh auth login (as iwaqasmaqbool) and from repo root
+# Run AFTER: gh auth login as cybernetsaudi ONLY (never iwaqasmaqbool for secrets)
 #
 #   cd /Users/waqas/secrets-store
-#   export SSH_PASS='your-hostinger-password'
+#   export SSH_PASS='your-hostinger-ssh-password'
+#   export FTP_PASS='your-hostinger-ftp-password'   # hPanel → FTP Accounts (required if ≠ SSH)
 #   ./scripts/setup_github_actions.sh
 
 set -euo pipefail
 
 REPO="cybernetsaudi/secrets-store"
 SSH_PASS="${SSH_PASS:-}"
+FTP_PASS="${FTP_PASS:-${SSH_PASS}}"
 
 if ! gh auth status -h github.com 2>&1 | grep -q 'cybernetsaudi'; then
   echo "Log in as cybernetsaudi first: gh auth login -h github.com" >&2
@@ -27,6 +29,7 @@ echo "Setting GitHub Actions secrets..."
 gh secret set SSH_HOST --repo "$REPO" --body "u950050130@145.79.209.14"
 gh secret set SSH_PORT --repo "$REPO" --body "65002"
 gh secret set SSH_PASS --repo "$REPO" --body "$SSH_PASS"
+gh secret set FTP_PASS --repo "$REPO" --body "$FTP_PASS"
 gh secret set NEXT_PUBLIC_API_URL --repo "$REPO" --body "https://secrets.gatvia.com/api"
 STRIPE_PK="${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}"
 if [[ -z "$STRIPE_PK" ]]; then
