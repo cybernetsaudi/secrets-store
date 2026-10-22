@@ -50,11 +50,35 @@ class VariantDimensionsMigration
             }
         }
 
+        $backfilled = self::backfillLegacyColorFromName($db);
+        if ($backfilled > 0) {
+            $lines[] = "Backfill: set option_color from legacy variant name on {$backfilled} row(s).";
+        } else {
+            $lines[] = 'Backfill: no legacy color-only rows needed updates.';
+        }
+
         $lines[] = 'Done.';
         return [
             'success' => true,
             'output' => implode("\n", $lines),
         ];
+    }
+
+    /**
+     * Legacy variants used `name` only (e.g. "black"). Copy into option_color so the storefront picker activates.
+     */
+    private static function backfillLegacyColorFromName(PDO $db): int
+    {
+        $stmt = $db->exec(
+            "UPDATE product_variants
+             SET option_color = TRIM(`name`)
+             WHERE (option_color IS NULL OR option_color = '')
+               AND (option_size IS NULL OR option_size = '')
+               AND (option_cup IS NULL OR option_cup = '')
+               AND `name` IS NOT NULL AND TRIM(`name`) != ''"
+        );
+
+        return $stmt === false ? 0 : (int) $stmt;
     }
 
     private static function columnExists(PDO $db, string $table, string $column): bool
