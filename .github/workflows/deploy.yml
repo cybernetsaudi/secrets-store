@@ -12,7 +12,7 @@ jobs:
   build-and-deploy:
     name: Build Next.js and Deploy to Hostinger
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -50,39 +50,74 @@ jobs:
         working-directory: backend-php
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      - name: Install deployment tools
-        run: sudo apt-get update && sudo apt-get install -y lftp sshpass rsync
-
-      - name: Validate deploy secrets
+      - name: Resolve FTP connection from secrets
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PASS: ${{ secrets.SSH_PASS }}
-        run: |
-          if [ -z "${SSH_HOST}" ]; then
-            echo "Missing GitHub secret: SSH_HOST (use u950050130@145.79.209.14)"
-            exit 1
-          fi
-          if [ -z "${SSH_PASS}" ]; then
-            echo "Missing GitHub secret: SSH_PASS"
-            exit 1
-          fi
-          echo "Deploy secrets present."
-
-      - name: Deploy to Hostinger (FTPS from GitHub runners)
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_PASS: ${{ secrets.SSH_PASS }}
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
           FTP_REMOTE_ROOT: ${{ secrets.FTP_REMOTE_ROOT }}
-          GITHUB_ACTIONS: "true"
-        run: bash .github/scripts/deploy-to-hostinger.sh
+        run: |
+          if [ -z "${SSH_PASS}" ]; then
+            echo "Missing secret: SSH_PASS (also used as FTP password)"
+            exit 1
+          fi
+          HOST="${FTP_HOST}"
+          USER="${FTP_USER}"
+          if [ -z "${HOST}" ] || [ -z "${USER}" ]; then
+            if [ -z "${SSH_HOST}" ] || [[ "${SSH_HOST}" != *"@"* ]]; then
+              echo "Set SSH_HOST=u950050130@145.79.209.14 or set FTP_HOST + FTP_USER secrets"
+              exit 1
+            fi
+            USER="${SSH_HOST%@*}"
+            HOST="${SSH_HOST#*@}"
+          fi
+          REMOTE="${FTP_REMOTE_ROOT:-domains/secrets.gatvia.com/public_html}"
+          echo "FTP_HOST=${HOST}" >> "$GITHUB_ENV"
+          echo "FTP_USER=${USER}" >> "$GITHUB_ENV"
+          echo "FTP_REMOTE_ROOT=${REMOTE}" >> "$GITHUB_ENV"
+          echo "Using FTPS ${USER}@${HOST} → ${REMOTE}"
+
+      - name: Include Apache rules in static export
+        run: cp public_html/.htaccess frontend/out/.htaccess
+
+      - name: Deploy frontend (FTPS)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ env.FTP_HOST }}
+          username: ${{ env.FTP_USER }}
+          password: ${{ secrets.SSH_PASS }}
+          port: 21
+          protocol: ftps
+          local-dir: frontend/out/
+          server-dir: ${{ env.FTP_REMOTE_ROOT }}/
+          dangerous-clean-slate: false
+          log-level: verbose
+          exclude: |
+            **/.git*
+            **/.DS_Store
+
+      - name: Deploy PHP API (FTPS)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ env.FTP_HOST }}
+          username: ${{ env.FTP_USER }}
+          password: ${{ secrets.SSH_PASS }}
+          port: 21
+          protocol: ftps
+          local-dir: backend-php/
+          server-dir: ${{ env.FTP_REMOTE_ROOT }}/api/
+          dangerous-clean-slate: false
+          log-level: verbose
+          exclude: |
+            **/.git*
+            **/.env
+            **/.env.*
+            **/uploads/**
+            **/tests/**
+            **/*.md
 
       - name: Deployment complete
         run: |
-          echo "✅ secrets.gatvia.com deployment complete!"
-          echo "Note: GitHub-hosted runners use FTPS (SSH/rsync exit 5 is expected on Hostinger)."
-          echo "After first FTPS deploy, run migration once in Hostinger SSH:"
-          echo "  php api/scripts/migrate_variant_dimensions.php"
+          echo "✅ secrets.gatvia.com deployment complete (FTPS)."
+          echo "Run DB migration once: Admin → Deploy → Run DB migration"

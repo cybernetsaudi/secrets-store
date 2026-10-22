@@ -40,27 +40,34 @@ deploy_ftps() {
     exit 5
   fi
 
+  local enc_pass
+  enc_pass="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.stdin.read(), safe=""))' <<<"${FTP_PASS}")"
+
   echo "=== FTPS deploy to ${FTP_HOST} (${FTP_REMOTE_ROOT}) ==="
 
-  lftp -u "${FTP_USER},${FTP_PASS}" "${FTP_HOST}" <<EOF
+  lftp -e "
 set ftp:ssl-allow true
+set ftp:passive-mode true
 set ssl:verify-certificate no
-set net:timeout 30
-set net:max-retries 2
+set net:timeout 60
+set net:max-retries 3
+open -p 21 ftps://${FTP_USER}:${enc_pass}@${FTP_HOST}
+pwd
+cd ${FTP_REMOTE_ROOT} || cd domains/secrets.gatvia.com/public_html || cd public_html
+pwd
 lcd ${ROOT_DIR}/frontend/out
-cd ${FTP_REMOTE_ROOT}
-mirror --reverse --delete --verbose --exclude api/ --exclude .htaccess
+mirror --reverse --verbose --exclude api/ --exclude-glob .htaccess
 lcd ${ROOT_DIR}/public_html
-put -O ${FTP_REMOTE_ROOT} .htaccess
+put -O . .htaccess
 lcd ${ROOT_DIR}/backend-php
-cd ${FTP_REMOTE_ROOT}/api
-mirror --reverse --delete --verbose \
+cd api || mkdir -p api; cd api
+mirror --reverse --verbose \
   --exclude-glob .env \
   --exclude-glob .env.* \
   --exclude-glob uploads/ \
   --exclude-glob .git/
 bye
-EOF
+"
 
   echo "=== FTPS deploy complete ==="
 }
