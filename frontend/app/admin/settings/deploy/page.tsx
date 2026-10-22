@@ -408,9 +408,9 @@ export default function DeployPage() {
             <h2 className="text-sm font-semibold mb-2 text-blue-300">🚀 How it Works</h2>
             <ul className="space-y-1 text-stone-300 text-sm">
               <li>• Triggers a GitHub Actions workflow</li>
-              <li>• GitHub builds Next.js in the cloud</li>
-              <li>• Files are SSH-deployed to Hostinger</li>
-              <li>• Usually takes 3–5 minutes</li>
+              <li>• GitHub builds Next.js + bundles PHP vendor</li>
+              <li>• Deploys via FTPS (Hostinger blocks GitHub SSH/rsync)</li>
+              <li>• Usually takes 4–6 minutes</li>
             </ul>
           </div>
         </div>
@@ -432,7 +432,8 @@ export default function DeployPage() {
           <div className="font-mono text-xs bg-stone-900/50 rounded p-3 space-y-1 text-stone-300">
             <div><span className="text-yellow-400">SSH_HOST</span>  = u950050130@145.79.209.14</div>
             <div><span className="text-yellow-400">SSH_PORT</span>  = 65002</div>
-            <div><span className="text-yellow-400">SSH_PASS</span>  = (your hosting password)</div>
+            <div><span className="text-yellow-400">SSH_PASS</span>  = (Hostinger password — also used for FTPS)</div>
+            <div><span className="text-yellow-400">FTP_REMOTE_ROOT</span> = domains/secrets.gatvia.com/public_html (optional)</div>
             <div><span className="text-yellow-400">NEXT_PUBLIC_API_URL</span> = https://secrets.gatvia.com/api</div>
             <div><span className="text-yellow-400">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</span> = pk_live_...</div>
           </div>
