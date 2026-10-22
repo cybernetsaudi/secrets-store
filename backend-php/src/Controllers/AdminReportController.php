@@ -54,7 +54,7 @@ class AdminReportController
         $summary = [
             'count' => 0,
             'by_currency' => [],
-            'totals_aed' => [
+            'totals_pkr' => [
                 'subtotal' => 0.0,
                 'discount' => 0.0,
                 'vat' => 0.0,
@@ -63,7 +63,7 @@ class AdminReportController
         ];
 
         foreach ($orders as &$order) {
-            $currency = $order['currency'] ?? 'AED';
+            $currency = $order['currency'] ?? 'PKR';
             $subtotal = (float)$order['subtotal'];
             $discount = (float)($order['discount_amount'] ?? 0);
             $vat = (float)$order['vat_amount'];
@@ -96,18 +96,18 @@ class AdminReportController
             $summary['by_currency'][$currency]['vat'] += $vat;
             $summary['by_currency'][$currency]['total'] += $total;
 
-            // Convert to AED using fx_rate (rate from AED -> order currency)
+            // Convert to PKR using fx_rate (rate from PKR -> order currency)
             $fxRate = (float)($order['fx_rate'] ?? 1.0);
             $rate = $fxRate > 0 ? $fxRate : 1.0;
-            $subtotalAed = $currency === 'AED' ? $subtotal : ($subtotal / $rate);
-            $discountAed = $currency === 'AED' ? $discount : ($discount / $rate);
-            $vatAed = $currency === 'AED' ? $vat : ($vat / $rate);
-            $totalAed = $currency === 'AED' ? $total : ($total / $rate);
+            $subtotalPkr = $currency === 'PKR' ? $subtotal : ($subtotal / $rate);
+            $discountPkr = $currency === 'PKR' ? $discount : ($discount / $rate);
+            $vatPkr = $currency === 'PKR' ? $vat : ($vat / $rate);
+            $totalPkr = $currency === 'PKR' ? $total : ($total / $rate);
 
-            $summary['totals_aed']['subtotal'] += $subtotalAed;
-            $summary['totals_aed']['discount'] += $discountAed;
-            $summary['totals_aed']['vat'] += $vatAed;
-            $summary['totals_aed']['total'] += $totalAed;
+            $summary['totals_pkr']['subtotal'] += $subtotalPkr;
+            $summary['totals_pkr']['discount'] += $discountPkr;
+            $summary['totals_pkr']['vat'] += $vatPkr;
+            $summary['totals_pkr']['total'] += $totalPkr;
         }
 
         return [

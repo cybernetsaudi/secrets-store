@@ -8,16 +8,24 @@ export interface ProductVariant {
   description?: string
   price_modifier: string
   is_active?: boolean
+  option_color?: string | null
+  option_size?: string | null
+  option_cup?: string | null
+  swatch_image?: string | null
 }
 
 export interface Product {
   id: number
   name: string
+  slug?: string
   description?: string
   short_description?: string
   base_price: string
+  compare_at_price?: string | null
   currency: string
   is_active?: boolean
+  collection?: string | null
+  product_category?: string | null
   variants?: ProductVariant[]
   images?: Array<{ id: number; image?: string; url?: string; alt_text?: string; is_primary?: boolean }>
 }
@@ -76,9 +84,12 @@ export async function processCheckout(payload: {
   guest_name: string
   guest_email: string
   guest_phone?: string
-  player_name?: string
-  player_date_of_birth?: string
-  trial_coach_name?: string
+  shipping_address_line1: string
+  shipping_address_line2?: string
+  shipping_city: string
+  shipping_state?: string
+  shipping_postal_code?: string
+  shipping_country: string
   items: Array<{ product_id: number; variant_id?: number; quantity: number }>
   payment_method: string
   payment_data?: Record<string, unknown>
@@ -93,7 +104,7 @@ export async function processCheckout(payload: {
     id: d.id,
     order_number: d.order_number ?? String(d.id ?? ''),
     total_amount: d.total_amount ?? d.total ?? 0,
-    currency: d.currency ?? 'AED',
+    currency: d.currency ?? 'PKR',
     checkout_url: d.checkout_url,
   }
 }

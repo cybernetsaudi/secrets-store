@@ -35,13 +35,13 @@ function saveItems(items: CartItem[]): void {
 }
 
 function loadCurrency(): Currency {
-  if (typeof window === 'undefined') return 'AED'
+  if (typeof window === 'undefined') return 'PKR'
   try {
     const c = localStorage.getItem(CURRENCY_STORAGE_KEY)
-    if (c && ['AED', 'USD', 'EUR', 'GBP', 'SAR', 'QAR', 'BHD', 'KWD', 'OMR'].includes(c))
+    if (c && ['PKR', 'AED', 'USD', 'GBP', 'SAR'].includes(c))
       return c as Currency
   } catch (_) {}
-  return 'AED'
+  return 'PKR'
 }
 
 function saveCurrency(currency: Currency): void {
@@ -75,7 +75,7 @@ export const Cart = {
     currency: Currency
   ): Promise<void> {
     const items = loadItems()
-    const origCurrency = (product.currency as Currency) || 'AED'
+    const origCurrency = (product.currency as Currency) || 'PKR'
     let unitPrice = parseFloat(product.base_price)
     if (variant) unitPrice += parseFloat(variant.price_modifier || '0')
     if (origCurrency !== currency) {

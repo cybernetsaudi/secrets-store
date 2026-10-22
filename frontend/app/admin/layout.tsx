@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { setCsrfToken } from '@/lib/adminApi'
+import { getApiUrl } from '@/lib/utils'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -27,7 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const fetchVisualSettings = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+        const apiUrl = getApiUrl()
         const response = await fetch(`${apiUrl}/settings/visual`)
         if (response.ok) {
           const data = await response.json()
@@ -71,7 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const checkAuth = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+      const apiUrl = getApiUrl()
       const response = await fetch(`${apiUrl}/admin/me`, {
         credentials: 'include',
       })
@@ -99,7 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLogout = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+      const apiUrl = getApiUrl()
       // Get CSRF token
       const meResponse = await fetch(`${apiUrl}/admin/me`, { credentials: 'include' })
       const meData = await meResponse.json()
@@ -147,14 +148,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(233, 30, 140, 0.12) 100%)',
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
         </div>
         <div className="relative flex items-center justify-center min-h-screen" style={{ zIndex: 1 }}>
           <div className="md:rounded-[40px] md:p-16 lg:p-24 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#DC143C] mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-400 mx-auto"></div>
             <p className="mt-4 text-stone-300">Loading...</p>
           </div>
         </div>
@@ -224,7 +225,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
+              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(233, 30, 140, 0.12) 100%)',
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
@@ -248,12 +249,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Header */}
             <div className="p-6 border-b border-stone-700/50">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#DC143C] to-[#003366] rounded-full flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold">GU</span>
+                <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-xs">GV</span>
                 </div>
                 <div>
-                  <h2 className="font-bold text-white">GUFC Admin</h2>
-                  <p className="text-xs text-stone-400">Control Panel</p>
+                  <h2 className="font-bold text-white">GATVIA Admin</h2>
+                  <p className="text-xs text-stone-400">Secrets Store</p>
                 </div>
               </div>
             </div>
@@ -267,7 +268,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     key={item.href}
                     href={item.href}
                     className={`flex items-center space-x-3 px-4 py-3 rounded-lg mb-2 transition-all duration-200 ${isActive
-                        ? 'bg-[#DC143C]/20 text-[#DC143C] font-medium border border-[#DC143C]/30 shadow-lg backdrop-blur-sm'
+                        ? 'bg-violet-500/20 text-violet-300 font-medium border border-violet-400/30 shadow-lg backdrop-blur-sm'
                         : 'text-stone-300 hover:bg-stone-700/50 hover:text-white hover:border hover:border-stone-600/50'
                       }`}
                   >
@@ -286,7 +287,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-sm text-stone-300 hover:bg-[#DC143C]/20 hover:text-[#DC143C] rounded-lg transition-all duration-200 border border-transparent hover:border-[#DC143C]/30"
+                className="w-full text-left px-4 py-2 text-sm text-stone-300 hover:bg-violet-500/20 hover:text-violet-300 rounded-lg transition-all duration-200 border border-transparent hover:border-violet-400/30"
               >
                 Logout
               </button>

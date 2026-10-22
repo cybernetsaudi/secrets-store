@@ -18,7 +18,8 @@ interface OrderRow {
   guest_name: string
   guest_email: string
   guest_phone: string
-  player_name?: string | null
+  shipping_city?: string | null
+  shipping_country?: string | null
   payment_ref?: string | null
   subtotal: number
   discount_amount: number
@@ -44,7 +45,7 @@ interface SummaryByCurrency {
 interface ReportSummary {
   count: number
   by_currency: SummaryByCurrency
-  totals_aed: {
+  totals_pkr: {
     subtotal: number
     discount: number
     vat: number
@@ -193,7 +194,7 @@ export default function AdminReportsPage() {
       'Payment Ref No.',
       'Date',
       'Customer',
-      'Player Name',
+      'Shipping City',
       'Product/s',
       'Email',
       'Phone',
@@ -211,7 +212,7 @@ export default function AdminReportsPage() {
         order.payment_ref ?? '',
         order.created_at,
         order.guest_name,
-        order.player_name ?? '',
+        order.shipping_city ?? '',
         formatProducts(order.items),
         order.guest_email,
         order.guest_phone,
@@ -410,7 +411,7 @@ export default function AdminReportsPage() {
           /* Customer column */
           .print-content td:nth-child(4) { max-width: 100px !important; white-space: normal !important; font-size: 7px !important; }
           .print-content td:nth-child(4) > div { font-size: 7px !important; line-height: 1.1 !important; }
-          /* Player Name column */
+          /* Shipping City column */
           .print-content td:nth-child(5) { max-width: 80px !important; font-size: 7px !important; }
           /* Products column */
           .print-content td:nth-child(6) { max-width: 120px !important; white-space: normal !important; font-size: 7px !important; }
@@ -561,25 +562,25 @@ export default function AdminReportsPage() {
               </p>
             </div>
             <div className="md:rounded-[40px] md:p-6 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-6 pr-6 pb-6 pl-6 backdrop-blur-3xl print:bg-white print:border print:border-gray-200">
-              <h2 className="text-sm font-semibold text-stone-300 mb-1 print:text-gray-600">Totals (AED)</h2>
-              <p className="text-xs text-stone-400 mb-1 print:text-gray-500">For VAT submission</p>
+              <h2 className="text-sm font-semibold text-stone-300 mb-1 print:text-gray-600">Totals (PKR)</h2>
+              <p className="text-xs text-stone-400 mb-1 print:text-gray-500">Converted to PKR for reporting</p>
               <dl className="text-xs text-stone-200 space-y-1 print:text-gray-700">
                 <div className="flex justify-between">
                   <dt>Net Sales (Subtotal - Discount)</dt>
                   <dd>
                     {formatCurrency(
-                      report.summary.totals_aed.subtotal - report.summary.totals_aed.discount,
-                      'AED',
+                      report.summary.totals_pkr.subtotal - report.summary.totals_pkr.discount,
+                      'PKR',
                     )}
                   </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt>VAT (Output Tax)</dt>
-                  <dd>{formatCurrency(report.summary.totals_aed.vat, 'AED')}</dd>
+                  <dd>{formatCurrency(report.summary.totals_pkr.vat, 'PKR')}</dd>
                 </div>
                 <div className="flex justify-between font-semibold">
                   <dt>Gross Sales (Incl. VAT)</dt>
-                  <dd>{formatCurrency(report.summary.totals_aed.total, 'AED')}</dd>
+                  <dd>{formatCurrency(report.summary.totals_pkr.total, 'PKR')}</dd>
                 </div>
               </dl>
             </div>
@@ -607,7 +608,7 @@ export default function AdminReportsPage() {
                   <th className="px-3 py-2 text-left font-medium text-stone-300 print:text-gray-500">Order #</th>
                   <th className="px-3 py-2 text-left font-medium text-stone-300 print:text-gray-500">Payment Ref No.</th>
                   <th className="px-3 py-2 text-left font-medium text-stone-300 print:text-gray-500">Customer</th>
-                  <th className="px-3 py-2 text-left font-medium text-stone-300 print:text-gray-500">Player Name</th>
+                  <th className="px-3 py-2 text-left font-medium text-stone-300 print:text-gray-500">Shipping City</th>
                   <th className="px-3 py-2 text-left font-medium text-stone-300 print:text-gray-500">Product/s</th>
                   <th className="px-3 py-2 text-left font-medium text-stone-300 print:text-gray-500">Payment</th>
                   <th className="px-3 py-2 text-right font-medium text-stone-300 print:text-gray-500">Subtotal</th>
@@ -633,7 +634,7 @@ export default function AdminReportsPage() {
                       <div className="text-[10px] text-stone-400 print:text-gray-500">{order.guest_email}</div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-stone-200 print:text-gray-700">
-                      {order.player_name || '—'}
+                      {order.shipping_city || '—'}
                     </td>
                     <td className="px-3 py-2 text-stone-200 print:text-gray-700 max-w-[200px]">
                       <div className="text-[10px] leading-snug whitespace-normal">

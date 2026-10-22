@@ -7,13 +7,14 @@ import { formatCurrency, Currency } from '@/lib/currency'
 import { motion } from 'framer-motion'
 import Confetti from '@/components/Confetti'
 import { useCart } from '@/contexts/CartContext'
+import StorefrontPageShell from '@/components/StorefrontPageShell'
 
 export default function SuccessPage() {
   const { clearCart } = useCart()
   const [orderNumber, setOrderNumber] = useState<string | null>(null)
-  const [status, setStatus] = useState<'success' | 'failed'>('success')
+  const [status, setStatus] = useState<'success' | 'failed' | 'cancelled'>('success')
   const [total, setTotal] = useState<string | null>(null)
-  const [currency, setCurrency] = useState<Currency>('AED')
+  const [currency, setCurrency] = useState<Currency>('PKR')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -22,40 +23,10 @@ export default function SuccessPage() {
   const [submitting, setSubmitting] = useState(false)
   const [orderChecked, setOrderChecked] = useState(false)
 
-  // Visual settings from API
-  const [visualSettings, setVisualSettings] = useState<{
-    products_bg_image_url: string
-    products_bg_contrast?: number
-    products_bg_saturation?: number
-    products_bg_brightness?: number
-  } | null>(null)
-
-  // Default background image
-  const defaultHeroBgImage = '' // Removed hardcoded image - wait for API response
-
-  useEffect(() => {
-    const fetchVisualSettings = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
-        const response = await fetch(`${apiUrl}/settings/visual`)
-        if (response.ok) {
-          const data = await response.json()
-          setVisualSettings({
-            products_bg_image_url: data.products_bg_image_url || '',
-            products_bg_contrast: parseFloat(data.products_bg_contrast) || 1,
-            products_bg_saturation: parseFloat(data.products_bg_saturation) || 1,
-            products_bg_brightness: parseFloat(data.products_bg_brightness) || 0.7,
-          })
-        }
-      } catch {
-        // silent fail – will use default image
-      }
-    }
-    
-    fetchVisualSettings()
-  }, [])
-
   const [statusParam, setStatusParam] = useState<string | null>(null)
+
+  const isFailureReturn = (value: string | null) =>
+    value !== null && ['failed', 'error', 'cancelled', 'canceled'].includes(value.toLowerCase())
 
   useEffect(() => {
     // Get order info from URL (order number, total, currency, status)
@@ -73,11 +44,18 @@ export default function SuccessPage() {
         setTotal(totalParam)
       }
 
-      if (currencyParam === 'AED' || currencyParam === 'USD' || currencyParam === 'GBP') {
+      if (
+        currencyParam === 'PKR' ||
+        currencyParam === 'AED' ||
+        currencyParam === 'USD' ||
+        currencyParam === 'GBP'
+      ) {
         setCurrency(currencyParam as Currency)
       }
 
-      if (urlStatusParam === 'failed' || urlStatusParam === 'error') {
+      if (urlStatusParam && ['cancelled', 'canceled'].includes(urlStatusParam.toLowerCase())) {
+        setStatus('cancelled')
+      } else if (isFailureReturn(urlStatusParam)) {
         setStatus('failed')
       } else {
         setStatus('success')
@@ -90,25 +68,43 @@ export default function SuccessPage() {
     const checkOrderStatus = async (retryCount = 0) => {
       if (!orderNumber) return
 
+      const explicitFailure = isFailureReturn(statusParam)
+
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
-        
+
+        const query = explicitFailure && statusParam
+          ? `?return_status=${encodeURIComponent(statusParam)}`
+          : ''
+
         console.log('Checking order status for:', orderNumber)
-        
-        // Find order by order number (public endpoint)
-        const response = await fetch(`${apiUrl}/orders/by-number/${orderNumber}`)
-        
+
+        const response = await fetch(`${apiUrl}/orders/by-number/${orderNumber}${query}`)
+
         if (response.ok) {
           const order = await response.json()
-          
+
+          if (order.order_number && order.order_number !== orderNumber) {
+            setOrderNumber(order.order_number)
+          }
+
           console.log('Order status:', {
             order_number: order.order_number,
             status: order.status,
             payment_status: order.payment_status,
             payment_method: order.payment_method,
           })
-          
-          // If payment is completed, clear cart
+
+          if (explicitFailure) {
+            if (['cancelled', 'canceled'].includes((statusParam ?? '').toLowerCase())) {
+              setStatus('cancelled')
+            } else {
+              setStatus('failed')
+            }
+            setOrderChecked(true)
+            return
+          }
+
           if (order.payment_status === 'completed' && order.status === 'paid') {
             console.log('Payment completed - clearing cart')
             clearCart()
@@ -121,14 +117,16 @@ export default function SuccessPage() {
             if (!currency && order.currency) {
               setCurrency(order.currency as Currency)
             }
-          } else if (order.payment_status === 'failed') {
-            console.log('Payment failed')
-            setStatus('failed')
+          } else if (order.payment_status === 'failed' || order.status === 'cancelled') {
+            console.log('Payment failed or cancelled')
+            setStatus(order.status === 'cancelled' ? 'cancelled' : 'failed')
             setOrderChecked(true)
           } else {
-            const isRedirectGateway = ['tabby', 'tamara', 'ngenius'].includes(order.payment_method)
-            const maxRetries = order.payment_method === 'ngenius' ? 12 : 5
-            const retryDelayMs = order.payment_method === 'ngenius' ? 5000 : 3000
+            const isRedirectGateway = ['tabby', 'tamara', 'ngenius', 'safepay'].includes(order.payment_method)
+            const maxRetries =
+              order.payment_method === 'ngenius' || order.payment_method === 'safepay' ? 12 : 5
+            const retryDelayMs =
+              order.payment_method === 'ngenius' || order.payment_method === 'safepay' ? 5000 : 3000
 
             // Redirect gateways can take a few seconds to show CAPTURED at Network.ae / Tabby / Tamara
             if (isRedirectGateway && retryCount < maxRetries) {
@@ -143,10 +141,7 @@ export default function SuccessPage() {
                 console.log('Tabby payment - clearing cart anyway (user completed on Tabby)')
                 clearCart()
               }
-              if (order.payment_method === 'ngenius' && status === 'success') {
-                console.log('Network.ae payment - clearing cart (customer returned from payment page)')
-                clearCart()
-              }
+              // Do not treat Safepay/N-Genius return as success when still pending (cancel may leave pending)
             }
           }
         } else {
@@ -184,7 +179,7 @@ export default function SuccessPage() {
     if (orderNumber && !orderChecked) {
       checkOrderStatus()
     }
-  }, [orderNumber, orderChecked, clearCart, total, currency, status])
+  }, [orderNumber, orderChecked, clearCart, total, currency, status, statusParam])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -213,7 +208,8 @@ export default function SuccessPage() {
         toast.success('Thank you! Your message has been sent.')
         setFormData({ name: '', email: '', message: '' })
       } else {
-        toast.error('Failed to send message. Please try again.')
+        const errorData = await response.json().catch(() => ({}))
+        toast.error(errorData.error || 'Failed to send message. Please try again.')
       }
     } catch (error) {
       toast.error('An error occurred. Please try again.')
@@ -223,64 +219,33 @@ export default function SuccessPage() {
   }
 
   const isSuccess = status === 'success'
-
-  // Use API image if available, otherwise use default
-  const productsBgImage = visualSettings?.products_bg_image_url || defaultHeroBgImage
-  // Build filter CSS string from settings
-  const productsBgFilter = `contrast(${visualSettings?.products_bg_contrast ?? 1}) saturate(${visualSettings?.products_bg_saturation ?? 1}) brightness(${visualSettings?.products_bg_brightness ?? 0.7})`
+  const isCancelled = status === 'cancelled'
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white antialiased overflow-x-hidden relative" style={{ paddingTop: '3%' }}>
-      {/* Full-screen background image */}
-      <div 
-        className="fixed top-0 left-0 w-full h-screen overflow-hidden"
-        style={{
-          ...(productsBgImage ? {
-            backgroundImage: `url(${productsBgImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            filter: productsBgFilter,
-          } : {}),
-          zIndex: 0,
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 via-[#003366]/30 to-gray-900/60"></div>
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
-      </div>
-
-      {/* Confetti for success */}
+    <StorefrontPageShell>
       {isSuccess && <Confetti />}
 
-      {/* Main Content */}
-      <main className="relative pb-20 md:pb-32 px-6" style={{ zIndex: 1 }}>
-        <div className="max-w-3xl mx-auto pt-12">
+      <main className="px-6 lg:px-12 py-12 md:py-16">
+        <div className="max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="md:rounded-[40px] md:p-12 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-12 pr-12 pb-12 pl-12 backdrop-blur-3xl text-center"
+            className="rounded-3xl border border-gray-200 bg-white p-8 md:p-12 shadow-sm text-center"
           >
-            {/* Success Icon */}
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
               className="mb-8"
             >
-              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-[#DC143C] to-[#b01030] rounded-full flex items-center justify-center shadow-2xl">
+              <div className="w-28 h-28 mx-auto bg-[var(--brand-btn-primary-bg)] rounded-full flex items-center justify-center shadow-lg">
                 {isSuccess ? (
                   <motion.svg
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ delay: 0.5, duration: 0.5 }}
-                    className="w-20 h-20 text-white"
+                    className="w-16 h-16 text-[var(--brand-btn-primary-text)]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -294,7 +259,7 @@ export default function SuccessPage() {
                   </motion.svg>
                 ) : (
                   <svg
-                    className="w-20 h-20 text-white"
+                    className="w-16 h-16 text-[var(--brand-btn-primary-text)]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -310,23 +275,19 @@ export default function SuccessPage() {
               </div>
             </motion.div>
 
-            {/* Title */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-5xl md:text-6xl font-bold text-white mb-4"
+              className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 mb-4"
             >
-              {isSuccess ? (
-                <>
-                  🎉 Congratulations! 🎉
-                </>
-              ) : (
-                'Payment Not Completed'
-              )}
+              {isSuccess
+                ? 'Thank you for your order'
+                : isCancelled
+                  ? 'Payment cancelled'
+                  : 'Payment not completed'}
             </motion.h1>
 
-            {/* Order Info */}
             {orderNumber && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -334,9 +295,9 @@ export default function SuccessPage() {
                 transition={{ delay: 0.4 }}
                 className="mb-6"
               >
-                <p className="text-xl text-stone-300">
-                  Order Number:{' '}
-                  <span className="font-bold text-[#DC143C]">{orderNumber}</span>
+                <p className="text-lg text-gray-600">
+                  Order number:{' '}
+                  <span className="font-bold text-[var(--brand-primary)]">{orderNumber}</span>
                 </p>
               </motion.div>
             )}
@@ -348,53 +309,59 @@ export default function SuccessPage() {
                 transition={{ delay: 0.5 }}
                 className="mb-8"
               >
-                <p className="text-2xl text-stone-200">
-                  Order Total:{' '}
-                  <span className="font-bold text-white">
+                <p className="text-xl text-gray-700">
+                  Total:{' '}
+                  <span className="font-bold text-gray-900">
                     {formatCurrency(parseFloat(total ?? '0'), currency)}
                   </span>
                 </p>
               </motion.div>
             )}
 
-            {/* Message */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="bg-stone-700/30 rounded-lg border border-stone-600/50 p-6 mb-8 text-left"
+              className="bg-gray-50 rounded-2xl border border-gray-200 p-6 mb-8 text-left"
             >
               {isSuccess ? (
                 <>
-                  <p className="text-stone-200 mb-4 text-lg">
-                    Thank you for your purchase! Your order has been successfully processed.
+                  <p className="text-gray-800 mb-3 text-lg">
+                    Your order has been received. We&apos;ll send a confirmation email shortly.
                   </p>
-                  <p className="text-stone-300 mb-4">
-                    You will receive a confirmation email shortly with all the details of your order and next steps.
-                  </p>
-                  <p className="text-stone-300">
-                    Once payment is confirmed, you will be onboarded onto our player management app where you can access your course materials and schedule.
+                  <p className="text-gray-600">
+                    If payment verification is still processing, your order status will update automatically within a few minutes.
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-stone-200 mb-4 text-lg">
-                    We were unable to complete your payment.
+                  <p className="text-gray-800 mb-3 text-lg">
+                    {isCancelled
+                      ? 'You cancelled checkout — no payment was taken.'
+                      : 'We couldn&apos;t complete your payment.'}
                   </p>
                   {orderNumber && (
-                    <p className="text-stone-300 mb-4">
-                      If you saw any charge attempt for order{' '}
-                      <span className="font-semibold">{orderNumber}</span>, it may be pending and will be automatically reversed if the payment did not succeed.
+                    <p className="text-gray-600 mb-3">
+                      {isCancelled ? (
+                        <>
+                          Order <span className="font-semibold">{orderNumber}</span> was not paid. Your cart is still
+                          available if you&apos;d like to try again.
+                        </>
+                      ) : (
+                        <>
+                          For order <span className="font-semibold">{orderNumber}</span>, any pending charge should
+                          reverse automatically if payment did not succeed.
+                        </>
+                      )}
                     </p>
                   )}
-                  <p className="text-stone-300">
-                    You can go back to the checkout page to try again, or contact us using the form below and we&apos;ll be happy to help.
+                  <p className="text-gray-600">
+                    Return to checkout to try again, or contact us below.
                   </p>
                 </>
               )}
             </motion.div>
 
-            {/* Go Back to Checkout Button (only for failed payments) */}
             {!isSuccess && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -404,113 +371,79 @@ export default function SuccessPage() {
               >
                 <Link
                   href="/checkout/"
-                  className="inline-flex items-center justify-center w-full md:w-auto px-8 py-4 bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800"
+                  className="inline-flex items-center justify-center w-full md:w-auto px-8 py-4 bg-[var(--brand-btn-primary-bg)] text-[var(--brand-btn-primary-text)] rounded-full hover:opacity-90 transition-all font-semibold text-lg"
                 >
-                  <svg
-                    className="w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                    />
-                  </svg>
-                  Go Back to Checkout
+                  Back to checkout
                 </Link>
               </motion.div>
             )}
 
-            {/* Contact Form */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 }}
-              className="border-t border-stone-600/50 pt-8"
+              className="border-t border-gray-200 pt-8"
             >
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Have a Question?
-              </h2>
-              <p className="text-stone-300 mb-6">
-                Feel free to reach out to us with any questions or concerns.
-              </p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Need help?</h2>
+              <p className="text-gray-600 mb-6">Send us a message and we&apos;ll get back to you.</p>
 
               <form onSubmit={handleSubmit} className="space-y-4 text-left">
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Your Name
-                  </label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Your name</label>
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full px-4 py-3 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent"
                     required
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Your Email
-                  </label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Your email</label>
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full px-4 py-3 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent"
                     required
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Message
-                  </label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Message</label>
                   <textarea
                     value={formData.message}
-                    onChange={(e) =>
-                      setFormData({ ...formData, message: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     rows={4}
-                    className="w-full px-4 py-3 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent"
                     required
                   />
                 </div>
-
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white py-3 px-6 rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                  className="w-full bg-[var(--brand-btn-primary-bg)] text-[var(--brand-btn-primary-text)] py-3 px-6 rounded-full hover:opacity-90 transition-all font-semibold disabled:opacity-50"
                 >
-                  {submitting ? 'Sending...' : 'Send Message'}
+                  {submitting ? 'Sending...' : 'Send message'}
                 </button>
               </form>
             </motion.div>
 
-            {/* Continue Shopping */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="mt-8 pt-8 border-t border-stone-600/50"
+              className="mt-8 pt-8 border-t border-gray-200"
             >
               <Link
                 href="/"
-                className="inline-flex items-center text-[#DC143C] hover:text-[#b01030] font-semibold text-lg transition-colors"
+                className="inline-flex items-center text-[var(--brand-primary)] hover:opacity-80 font-semibold text-lg transition-colors"
               >
-                Continue Shopping →
+                Continue shopping →
               </Link>
             </motion.div>
           </motion.div>
         </div>
       </main>
-    </div>
+    </StorefrontPageShell>
   )
 }

@@ -124,8 +124,8 @@ class AdminSettingsController
         try {
             // Use PHP mail() or PHPMailer if available
             // For now, simple test
-            $subject = 'Gulf United FC - Email Configuration Test';
-            $message = "This is a test email from your Gulf United FC e-commerce store.\n\n";
+            $subject = 'GatviaPK - Email Configuration Test';
+            $message = "This is a test email from your GatviaPK e-commerce store.\n\n";
             $message .= "If you receive this, your email configuration is working correctly.\n\n";
             $message .= "Sent at: " . date('Y-m-d H:i:s');
             
@@ -218,17 +218,34 @@ class AdminSettingsController
     {
         Auth::requireAuth();
         
+        // Helper to get images as array (support both old single image and new array format)
+        $getImages = function($key) {
+            $value = Setting::get($key, '');
+            if (empty($value)) return [];
+            // Try to decode as JSON array
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+            // If it's a single string URL, return as array for backward compatibility
+            return $value ? [$value] : [];
+        };
+        
         return [
             'site_logo_url' => Setting::get('site_logo_url', ''),
             'header_logo_url' => Setting::get('header_logo_url', ''),
-            'landing_bg_image_url' => Setting::get('landing_bg_image_url', ''),
+            'landing_bg_image_url' => $getImages('landing_bg_image_url'),
             'products_bg_image_url' => Setting::get('products_bg_image_url', ''),
-            'landing_tile_1_image' => Setting::get('landing_tile_1_image', ''),
-            'landing_tile_2_image' => Setting::get('landing_tile_2_image', ''),
-            'landing_tile_3_image' => Setting::get('landing_tile_3_image', ''),
-            'landing_tile_4_image' => Setting::get('landing_tile_4_image', ''),
-            'landing_tile_5_image' => Setting::get('landing_tile_5_image', ''),
-            'landing_tile_6_image' => Setting::get('landing_tile_6_image', ''),
+            'landing_tile_1_image' => $getImages('landing_tile_1_image'), // Featured Big Block
+            'landing_tile_2_image' => $getImages('landing_tile_2_image'), // Classic — Essentials row
+            'landing_tile_3_image' => $getImages('landing_tile_3_image'), // Premium — Essentials row
+            'landing_tile_4_image' => $getImages('landing_tile_4_image'), // Designer — Essentials row
+            'landing_tile_5_image' => $getImages('landing_tile_5_image'), // Limited — Essentials row
+            'landing_tile_6_image' => $getImages('landing_tile_6_image'),
+            'product_placeholder_classic_url' => Setting::get('product_placeholder_classic_url', ''),
+            'product_placeholder_premium_url' => Setting::get('product_placeholder_premium_url', ''),
+            'product_placeholder_designer_url' => Setting::get('product_placeholder_designer_url', ''),
+            'product_placeholder_limited_url' => Setting::get('product_placeholder_limited_url', ''),
             // Filter settings
             'landing_bg_contrast' => Setting::get('landing_bg_contrast', '1'),
             'landing_bg_saturation' => Setting::get('landing_bg_saturation', '1'),
@@ -263,24 +280,46 @@ class AdminSettingsController
         if (isset($data['products_bg_image_url'])) {
             Setting::set('products_bg_image_url', $data['products_bg_image_url'], 'string', $user['id']);
         }
-        // Tile images
+        // Landing background images (array)
+        if (isset($data['landing_bg_image_url'])) {
+            $images = is_array($data['landing_bg_image_url']) ? $data['landing_bg_image_url'] : [$data['landing_bg_image_url']];
+            Setting::set('landing_bg_image_url', json_encode(array_filter($images)), 'json', $user['id']);
+        }
+        
+        // Tile images (arrays)
         if (isset($data['landing_tile_1_image'])) {
-            Setting::set('landing_tile_1_image', $data['landing_tile_1_image'], 'string', $user['id']);
+            $images = is_array($data['landing_tile_1_image']) ? $data['landing_tile_1_image'] : [$data['landing_tile_1_image']];
+            Setting::set('landing_tile_1_image', json_encode(array_filter($images)), 'json', $user['id']);
         }
         if (isset($data['landing_tile_2_image'])) {
-            Setting::set('landing_tile_2_image', $data['landing_tile_2_image'], 'string', $user['id']);
+            $images = is_array($data['landing_tile_2_image']) ? $data['landing_tile_2_image'] : [$data['landing_tile_2_image']];
+            Setting::set('landing_tile_2_image', json_encode(array_filter($images)), 'json', $user['id']);
         }
         if (isset($data['landing_tile_3_image'])) {
-            Setting::set('landing_tile_3_image', $data['landing_tile_3_image'], 'string', $user['id']);
+            $images = is_array($data['landing_tile_3_image']) ? $data['landing_tile_3_image'] : [$data['landing_tile_3_image']];
+            Setting::set('landing_tile_3_image', json_encode(array_filter($images)), 'json', $user['id']);
         }
         if (isset($data['landing_tile_4_image'])) {
-            Setting::set('landing_tile_4_image', $data['landing_tile_4_image'], 'string', $user['id']);
+            $images = is_array($data['landing_tile_4_image']) ? $data['landing_tile_4_image'] : [$data['landing_tile_4_image']];
+            Setting::set('landing_tile_4_image', json_encode(array_filter($images)), 'json', $user['id']);
         }
         if (isset($data['landing_tile_5_image'])) {
-            Setting::set('landing_tile_5_image', $data['landing_tile_5_image'], 'string', $user['id']);
+            $images = is_array($data['landing_tile_5_image']) ? $data['landing_tile_5_image'] : [$data['landing_tile_5_image']];
+            Setting::set('landing_tile_5_image', json_encode(array_filter($images)), 'json', $user['id']);
         }
         if (isset($data['landing_tile_6_image'])) {
-            Setting::set('landing_tile_6_image', $data['landing_tile_6_image'], 'string', $user['id']);
+            $images = is_array($data['landing_tile_6_image']) ? $data['landing_tile_6_image'] : [$data['landing_tile_6_image']];
+            Setting::set('landing_tile_6_image', json_encode(array_filter($images)), 'json', $user['id']);
+        }
+        foreach ([
+            'product_placeholder_classic_url',
+            'product_placeholder_premium_url',
+            'product_placeholder_designer_url',
+            'product_placeholder_limited_url',
+        ] as $placeholderKey) {
+            if (array_key_exists($placeholderKey, $data)) {
+                Setting::set($placeholderKey, $data[$placeholderKey] ?? '', 'string', $user['id']);
+            }
         }
         // Filter settings
         if (isset($data['landing_bg_contrast'])) {
@@ -314,6 +353,8 @@ class AdminSettingsController
         Auth::requireAuth();
         
         $user = Auth::user();
+        $tileKey = isset($_POST['tile_key']) ? $_POST['tile_key'] : null;
+        $action = isset($_POST['action']) ? $_POST['action'] : 'add'; // 'add' or 'remove'
         $imageIndex = isset($_POST['image_index']) ? (int)$_POST['image_index'] : null;
         
         // Determine which type of image is being uploaded
@@ -321,69 +362,130 @@ class AdminSettingsController
         $fileKey = null;
         $urlKey = null;
         
-        if (isset($_FILES['site_logo']) && $_FILES['site_logo']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'site_logo';
-            $fileKey = 'site_logo';
-            $urlKey = 'site_logo_url';
-        } elseif (isset($_FILES['header_logo']) && $_FILES['header_logo']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'header_logo';
-            $fileKey = 'header_logo';
-            $urlKey = 'header_logo_url';
-        } elseif (isset($_FILES['landing_bg_image']) && $_FILES['landing_bg_image']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'landing_bg_image';
-            $fileKey = 'landing_bg_image';
-            $urlKey = 'landing_bg_image_url';
-        } elseif (isset($_FILES['products_bg_image']) && $_FILES['products_bg_image']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'products_bg_image';
-            $fileKey = 'products_bg_image';
-            $urlKey = 'products_bg_image_url';
-        } elseif (isset($_FILES['landing_tile_1_image']) && $_FILES['landing_tile_1_image']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'landing_tile_1_image';
-            $fileKey = 'landing_tile_1_image';
-            $urlKey = 'landing_tile_1_image';
-        } elseif (isset($_FILES['landing_tile_2_image']) && $_FILES['landing_tile_2_image']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'landing_tile_2_image';
-            $fileKey = 'landing_tile_2_image';
-            $urlKey = 'landing_tile_2_image';
-        } elseif (isset($_FILES['landing_tile_3_image']) && $_FILES['landing_tile_3_image']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'landing_tile_3_image';
-            $fileKey = 'landing_tile_3_image';
-            $urlKey = 'landing_tile_3_image';
-        } elseif (isset($_FILES['landing_tile_4_image']) && $_FILES['landing_tile_4_image']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'landing_tile_4_image';
-            $fileKey = 'landing_tile_4_image';
-            $urlKey = 'landing_tile_4_image';
-        } elseif (isset($_FILES['landing_tile_5_image']) && $_FILES['landing_tile_5_image']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'landing_tile_5_image';
-            $fileKey = 'landing_tile_5_image';
-            $urlKey = 'landing_tile_5_image';
-        } elseif (isset($_FILES['landing_tile_6_image']) && $_FILES['landing_tile_6_image']['error'] === UPLOAD_ERR_OK) {
-            $imageType = 'landing_tile_6_image';
-            $fileKey = 'landing_tile_6_image';
-            $urlKey = 'landing_tile_6_image';
+        // First, check if there's a file upload in $_FILES
+        // Check all possible file keys
+        $possibleKeys = [
+            'site_logo' => 'site_logo_url',
+            'header_logo' => 'header_logo_url',
+            'landing_bg_image' => 'landing_bg_image_url',
+            'products_bg_image' => 'products_bg_image_url',
+            'landing_tile_1_image' => 'landing_tile_1_image',
+            'landing_tile_2_image' => 'landing_tile_2_image',
+            'landing_tile_3_image' => 'landing_tile_3_image',
+            'landing_tile_4_image' => 'landing_tile_4_image',
+            'landing_tile_5_image' => 'landing_tile_5_image',
+            'landing_tile_6_image' => 'landing_tile_6_image',
+            'product_placeholder_classic' => 'product_placeholder_classic_url',
+            'product_placeholder_premium' => 'product_placeholder_premium_url',
+            'product_placeholder_designer' => 'product_placeholder_designer_url',
+            'product_placeholder_limited' => 'product_placeholder_limited_url',
+        ];
+        
+        foreach ($possibleKeys as $key => $settingKey) {
+            if (isset($_FILES[$key]) && $_FILES[$key]['error'] === UPLOAD_ERR_OK) {
+                $imageType = $key;
+                $fileKey = $key;
+                $urlKey = $settingKey;
+                break;
+            }
+        }
+        
+        // If no file found, check if there's any file in $_FILES (fallback for dynamic keys)
+        if (!$imageType && !empty($_FILES)) {
+            foreach ($_FILES as $key => $file) {
+                if ($file['error'] === UPLOAD_ERR_OK) {
+                    $imageType = $key;
+                    $fileKey = $key;
+                    // Try to determine the setting key
+                    if (in_array($key, array_keys($possibleKeys))) {
+                        $urlKey = $possibleKeys[$key];
+                    } else {
+                        // Use the key itself as the setting key
+                        $urlKey = $key;
+                    }
+                    break;
+                }
+            }
         }
         
         // Handle file upload
         if ($imageType && $fileKey) {
-            // Use uploadLogo for logos, or create a generic image upload method
             $upload = FileUploadService::uploadLogo($_FILES[$fileKey], $imageType);
             if ($upload['success']) {
                 $url = $upload['url'];
                 
-                // Single image setting (all tiles are now single images)
-                Setting::set($urlKey, $url, 'string', $user['id']);
+                // Handle single image settings (logos, products_bg)
+                if (in_array($urlKey, [
+                    'site_logo_url',
+                    'header_logo_url',
+                    'products_bg_image_url',
+                    'product_placeholder_classic_url',
+                    'product_placeholder_premium_url',
+                    'product_placeholder_designer_url',
+                    'product_placeholder_limited_url',
+                ])) {
+                    Setting::set($urlKey, $url, 'string', $user['id']);
+                    return ['success' => true, 'url' => $url];
+                }
                 
-                return ['success' => true, 'url' => $url];
+                // Handle array-based settings (tiles, landing_bg)
+                $currentValue = Setting::get($urlKey, '');
+                $images = [];
+                if (!empty($currentValue)) {
+                    $decoded = json_decode($currentValue, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $images = $decoded;
+                    } else {
+                        // Backward compatibility: single string becomes array
+                        $images = [$currentValue];
+                    }
+                }
+                
+                // Add new image to array
+                $images[] = $url;
+                Setting::set($urlKey, json_encode(array_filter($images)), 'json', $user['id']);
+                
+                return ['success' => true, 'url' => $url, 'images' => $images];
             } else {
                 http_response_code(400);
                 return ['success' => false, 'error' => 'Upload failed: ' . $upload['error']];
             }
         }
         
-        // Handle URL-based update
-        foreach (['site_logo_url', 'header_logo_url', 'landing_bg_image_url', 'products_bg_image_url', 
-                  'landing_tile_1_image', 'landing_tile_2_image', 'landing_tile_3_image', 
-                  'landing_tile_4_image', 'landing_tile_5_image', 'landing_tile_6_image'] as $key) {
+        // Handle remove action
+        if ($action === 'remove' && $tileKey && $imageIndex !== null) {
+            $currentValue = Setting::get($tileKey, '');
+            $images = [];
+            if (!empty($currentValue)) {
+                $decoded = json_decode($currentValue, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $images = $decoded;
+                } else {
+                    $images = [$currentValue];
+                }
+            }
+            
+            if (isset($images[$imageIndex])) {
+                unset($images[$imageIndex]);
+                $images = array_values($images); // Re-index array
+                Setting::set($tileKey, json_encode($images), 'json', $user['id']);
+                return ['success' => true, 'images' => $images];
+            }
+            
+            http_response_code(400);
+            return ['success' => false, 'error' => 'Image index not found'];
+        }
+        
+        // Handle URL-based update (for single images)
+        foreach ([
+            'site_logo_url',
+            'header_logo_url',
+            'products_bg_image_url',
+            'product_placeholder_classic_url',
+            'product_placeholder_premium_url',
+            'product_placeholder_designer_url',
+            'product_placeholder_limited_url',
+        ] as $key) {
             if (isset($_POST[$key])) {
                 $url = $_POST[$key];
                 Setting::set($key, $url, 'string', $user['id']);
@@ -391,8 +493,33 @@ class AdminSettingsController
             }
         }
         
+        // If we get here, no file was found and no URL was provided
+        // Log what we received for debugging
+        $debugInfo = [
+            'files_received' => array_keys($_FILES),
+            'files_details' => !empty($_FILES) ? array_map(function($file) {
+                return [
+                    'name' => $file['name'] ?? 'N/A',
+                    'error' => $file['error'] ?? 'N/A',
+                    'size' => $file['size'] ?? 'N/A',
+                    'type' => $file['type'] ?? 'N/A',
+                ];
+            }, $_FILES) : [],
+            'post_keys' => array_keys($_POST),
+            'post_data' => $_POST,
+            'content_type' => $_SERVER['CONTENT_TYPE'] ?? 'not set',
+            'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'not set',
+            'action' => $action,
+            'tile_key' => $tileKey,
+        ];
+        error_log("UploadVisualImage: No file or URL provided. Debug: " . json_encode($debugInfo));
+        
         http_response_code(400);
-        return ['success' => false, 'error' => 'No file or URL provided'];
+        return [
+            'success' => false, 
+            'error' => 'No file or URL provided. Please ensure you are uploading a valid image file.',
+            'debug' => $debugInfo
+        ];
     }
 }
 

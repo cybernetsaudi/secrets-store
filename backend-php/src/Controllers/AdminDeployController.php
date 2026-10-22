@@ -307,6 +307,46 @@ class AdminDeployController
     }
 
     /**
+     * Run idempotent DB migrations after FTPS deploy (no SSH shell on GitHub runners).
+     * POST /api/admin/deploy/migrate-db
+     */
+    public function migrateDatabase(): array
+    {
+        try {
+            Auth::requireAuth();
+        } catch (\Exception $e) {
+            http_response_code(401);
+            return ['error' => 'Authentication required'];
+        }
+
+        $script = dirname(__DIR__, 2) . '/scripts/migrate_variant_dimensions.php';
+        if (!is_file($script)) {
+            http_response_code(500);
+            return ['error' => 'Migration script not found on server'];
+        }
+
+        $output = [];
+        $exitCode = 0;
+        exec('php ' . escapeshellarg($script) . ' 2>&1', $output, $exitCode);
+        $text = trim(implode("\n", $output));
+
+        if ($exitCode !== 0) {
+            http_response_code(500);
+            return [
+                'error' => 'Migration failed',
+                'output' => $text,
+                'exit_code' => $exitCode,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Database migration finished.',
+            'output' => $text,
+        ];
+    }
+
+    /**
      * Save or update the GitHub deploy token in the settings table.
      * POST /api/admin/settings/github-token
      */

@@ -132,7 +132,7 @@ class TamaraAdapter implements PaymentGatewayInterface
                 'cancel' => "{$baseUrl}/success/?order={$orderNumber}&status=cancelled",
             ],
             'locale' => 'en_US',
-            'platform' => 'Gulf United FC Store',
+            'platform' => 'GATVIA Secrets',
         ];
 
         if (!empty($order['shipping_address'])) {

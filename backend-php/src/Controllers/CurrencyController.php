@@ -8,7 +8,7 @@ class CurrencyController
 {
     public function getRate(): array
     {
-        $from = $_GET['from'] ?? 'AED';
+        $from = $_GET['from'] ?? 'PKR';
         $to = $_GET['to'] ?? 'USD';
         
         $service = new CurrencyService();

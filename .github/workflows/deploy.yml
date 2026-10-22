@@ -12,7 +12,7 @@ jobs:
   build-and-deploy:
     name: Build Next.js and Deploy to Hostinger
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout code
@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -34,62 +34,55 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-        run: npm run build
+        run: |
+          if [ -z "${NEXT_PUBLIC_API_URL}" ]; then
+            export NEXT_PUBLIC_API_URL="https://secrets.gatvia.com/api"
+          fi
+          npm run build
 
-      - name: Install sshpass
-        run: sudo apt-get install -y sshpass rsync
+      - name: Setup PHP for Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
 
-      - name: Deploy frontend to Hostinger
+      - name: Bundle PHP vendor for FTPS deploy
+        working-directory: backend-php
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Install deployment tools
+        run: sudo apt-get update && sudo apt-get install -y lftp sshpass rsync
+
+      - name: Validate deploy secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PASS: ${{ secrets.SSH_PASS }}
+        run: |
+          if [ -z "${SSH_HOST}" ]; then
+            echo "Missing GitHub secret: SSH_HOST (use u950050130@145.79.209.14)"
+            exit 1
+          fi
+          if [ -z "${SSH_PASS}" ]; then
+            echo "Missing GitHub secret: SSH_PASS"
+            exit 1
+          fi
+          echo "Deploy secrets present."
+
+      - name: Deploy to Hostinger (FTPS from GitHub runners)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_PASS: ${{ secrets.SSH_PASS }}
-        run: |
-          sshpass -p "$SSH_PASS" rsync -avz --delete \
-            -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" \
-            --exclude='.git' \
-            --exclude='api/' \
-            --exclude='.htaccess' \
-            frontend/out/ \
-            $SSH_HOST:~/domains/secrets.gatvia.com/public_html/
-
-      - name: Deploy .htaccess
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_PASS: ${{ secrets.SSH_PASS }}
-        run: |
-          sshpass -p "$SSH_PASS" rsync -avz \
-            -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" \
-            public_html/.htaccess \
-            $SSH_HOST:~/domains/secrets.gatvia.com/public_html/.htaccess
-
-      - name: Deploy PHP backend
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_PASS: ${{ secrets.SSH_PASS }}
-        run: |
-          sshpass -p "$SSH_PASS" rsync -avz \
-            -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no" \
-            --exclude='node_modules' \
-            --exclude='.git' \
-            --exclude='*.md' \
-            --exclude='tests' \
-            --exclude='.env' \
-            --exclude='.env.example' \
-            --exclude='vendor' \
-            backend-php/ \
-            $SSH_HOST:~/domains/secrets.gatvia.com/public_html/api/
-
-      - name: Run composer install on server
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_PASS: ${{ secrets.SSH_PASS }}
-        run: |
-          sshpass -p "$SSH_PASS" ssh -p $SSH_PORT -o StrictHostKeyChecking=no $SSH_HOST \
-            "cd ~/domains/secrets.gatvia.com/public_html/api && composer install --no-dev --optimize-autoloader"
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+          FTP_REMOTE_ROOT: ${{ secrets.FTP_REMOTE_ROOT }}
+          GITHUB_ACTIONS: "true"
+        run: bash .github/scripts/deploy-to-hostinger.sh
 
       - name: Deployment complete
-        run: echo "✅ secrets.gatvia.com deployment complete!"
+        run: |
+          echo "✅ secrets.gatvia.com deployment complete!"
+          echo "Note: GitHub-hosted runners use FTPS (SSH/rsync exit 5 is expected on Hostinger)."
+          echo "After first FTPS deploy, run migration once in Hostinger SSH:"
+          echo "  php api/scripts/migrate_variant_dimensions.php"

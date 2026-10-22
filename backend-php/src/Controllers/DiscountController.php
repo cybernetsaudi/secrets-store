@@ -33,7 +33,7 @@ class DiscountController
             'discount_value' => (string)$discountCode['discount_value'],
             'discount_amount' => (string)$discountAmount,
             'message' => "Discount code applied: {$discountCode['discount_value']}" . 
-                        ($discountCode['discount_type'] === 'percentage' ? '%' : ' AED') . ' off',
+                        ($discountCode['discount_type'] === 'percentage' ? '%' : ' PKR') . ' off',
         ];
     }
 }

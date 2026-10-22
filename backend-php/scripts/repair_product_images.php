@@ -3,6 +3,9 @@
  * Re-link orphaned product image files on disk to product_images table.
  * Uses the newest upload file per product ID when that product has no DB images.
  *
+ * WARNING: Do not run after purge if you want collection placeholders — this
+ * re-attaches legacy files still present under uploads/products/.
+ *
  * Usage: php scripts/repair_product_images.php [--dry-run]
  */
 

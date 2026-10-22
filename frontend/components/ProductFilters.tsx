@@ -131,11 +131,11 @@ export default function ProductFilters({ onFilterChange, products, initialFilter
               {/* Price Range */}
               <div>
                 <label className="block text-sm font-semibold text-white mb-3">
-                  Price Range: {filters.priceRange[0]} - {filters.priceRange[1]} AED
+                  Price Range: {filters.priceRange[0]} - {filters.priceRange[1]} PKR
                 </label>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs text-stone-400 mb-1">Min: {filters.priceRange[0]} AED</label>
+                    <label className="block text-xs text-stone-400 mb-1">Min: {filters.priceRange[0]} PKR</label>
                     <input
                       type="range"
                       min={minPrice}
@@ -151,7 +151,7 @@ export default function ProductFilters({ onFilterChange, products, initialFilter
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-stone-400 mb-1">Max: {filters.priceRange[1]} AED</label>
+                    <label className="block text-xs text-stone-400 mb-1">Max: {filters.priceRange[1]} PKR</label>
                     <input
                       type="range"
                       min={minPrice}
@@ -219,7 +219,6 @@ export default function ProductFilters({ onFilterChange, products, initialFilter
     </div>
   )
 }
-
 
 
 

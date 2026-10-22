@@ -16,7 +16,7 @@ class Payment
                 $data['gateway'],
                 $data['transaction_id'],
                 $data['amount'],
-                $data['currency'] ?? 'AED',
+                $data['currency'] ?? 'PKR',
                 $data['status'] ?? 'pending',
                 $data['gateway_response'] ?? null,
             ]

@@ -21,7 +21,7 @@ interface TabbyPromoProps {
  */
 export default function TabbyPromo({
   price,
-  currency = 'AED',
+  currency = 'PKR',
   source = 'product',
   lang = 'en',
   shouldInheritBg = false,

@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
 
+const TEST_SHIPPING = {
+  shipping_address_line1: '123 Test Street',
+  shipping_city: 'Karachi',
+  shipping_country: 'PK',
+}
+
 interface TestResult {
   name: string
   status: 'pending' | 'testing' | 'pass' | 'fail' | 'warning'
@@ -22,7 +28,7 @@ export default function TestPage() {
     'Public APIs': [
       { name: 'GET /api/products', method: 'GET', url: '/products' },
       { name: 'GET /api/products/{id}', method: 'GET', url: '/products/1' },
-      { name: 'GET /api/currency/rates', method: 'GET', url: '/currency/rates?from=AED&to=USD' },
+      { name: 'GET /api/currency/rates', method: 'GET', url: '/currency/rates?from=PKR&to=USD' },
       { name: 'POST /api/discount/validate (invalid)', method: 'POST', url: '/discount/validate', body: { code: 'INVALID', order_amount: 100 }, expect400: true },
       { name: 'POST /api/discount/validate (valid)', method: 'POST', url: '/discount/validate', body: { code: 'BB', order_amount: 100 } },
       { name: 'GET /api/payment-gateway/bank-transfer', method: 'GET', url: '/payment-gateway/bank-transfer' },
@@ -52,8 +58,8 @@ export default function TestPage() {
       { name: 'GET /api/admin/settings/email', method: 'GET', url: '/admin/settings/email', requiresAuth: true },
     ],
     'Payment Endpoints': [
-      { name: 'POST /api/payment/create-intent', method: 'POST', url: '/payment/create-intent', body: { items: [{ product: { id: 1 }, variant: { id: 1 }, quantity: 1, unitPrice: 1000 }], formData: { guest_name: 'Test', guest_email: 'test@test.com', guest_phone: '123' }, currency: 'AED' } },
-      { name: 'POST /api/checkout', method: 'POST', url: '/checkout', body: { guest_name: 'Test', guest_email: 'test@test.com', guest_phone: '123', items: [], payment_method: 'bank_transfer', currency: 'AED', no_refund_accepted: true } },
+      { name: 'POST /api/payment/create-intent', method: 'POST', url: '/payment/create-intent', body: { items: [{ product: { id: 1 }, variant: { id: 1 }, quantity: 1, unitPrice: 1000 }], formData: { guest_name: 'Test', guest_email: 'test@test.com', guest_phone: '123', ...TEST_SHIPPING }, currency: 'PKR' } },
+      { name: 'POST /api/checkout', method: 'POST', url: '/checkout', body: { guest_name: 'Test', guest_email: 'test@test.com', guest_phone: '123', ...TEST_SHIPPING, items: [], payment_method: 'bank_transfer', currency: 'PKR', no_refund_accepted: true } },
     ],
     'Webhooks': [
       { name: 'POST /api/webhooks/stripe', method: 'POST', url: '/webhooks/stripe', body: {} },

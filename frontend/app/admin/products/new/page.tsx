@@ -3,6 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { COLLECTION_LIST, CollectionId } from '@/lib/collections'
+import { PRODUCT_CURRENCIES } from '@/lib/currency'
+import { getCategoriesForCollection, isValidCategoryForCollection } from '@/lib/categories'
+import ApparelVariantEditor, { VariantFormRow } from '@/components/admin/ApparelVariantEditor'
+import { buildVariantDisplayName } from '@/lib/productVariants'
 
 const MAX_PRODUCT_IMAGE_BYTES = 10 * 1024 * 1024
 
@@ -22,10 +27,13 @@ export default function NewProductPage() {
     name: '',
     description: '',
     short_description: '',
+    collection: 'classic',
+    product_category: '',
     base_price: '',
-    currency: 'AED',
+    compare_at_price: '',
+    currency: 'PKR',
     is_active: true,
-    variants: [] as Array<{ name: string; description: string; price_modifier: string; is_active: boolean }>,
+    variants: [] as VariantFormRow[],
     images: [] as Array<{ url: string; alt_text: string; file?: File }>,
   })
 
@@ -85,18 +93,21 @@ export default function NewProductPage() {
       return false
     }
     
-    // Validate at least one image (URL or file)
-    const hasImages = formData.images.some(img => img.url || img.file)
-    if (!hasImages) {
-      toast.error('At least one product image is required')
-      return false
-    }
+    // Images optional — collection placeholder used on storefront when none uploaded
     
     // Validate variants if any
     for (let i = 0; i < formData.variants.length; i++) {
       const variant = formData.variants[i]
-      if (!variant.name || variant.name.trim() === '') {
-        toast.error(`Variant ${i + 1}: Name is required`)
+      const label =
+        variant.option_color?.trim() ||
+        variant.name?.trim() ||
+        buildVariantDisplayName(
+          variant.option_color,
+          variant.option_size,
+          variant.option_cup
+        )
+      if (!label) {
+        toast.error(`Variant ${i + 1}: Name or color is required`)
         return false
       }
       const priceMod = parseFloat(variant.price_modifier)
@@ -159,7 +170,10 @@ export default function NewProductPage() {
         formDataToSend.append('name', formData.name)
         formDataToSend.append('description', formData.description)
         formDataToSend.append('short_description', formData.short_description || '')
+        formDataToSend.append('collection', formData.collection)
+        formDataToSend.append('product_category', formData.product_category || '')
         formDataToSend.append('base_price', formData.base_price)
+        formDataToSend.append('compare_at_price', formData.compare_at_price || '')
         formDataToSend.append('currency', formData.currency)
         formDataToSend.append('is_active', formData.is_active.toString())
         formDataToSend.append('variants', JSON.stringify(formData.variants))
@@ -272,29 +286,6 @@ export default function NewProductPage() {
     }
   }
 
-  const addVariant = () => {
-    setFormData({
-      ...formData,
-      variants: [
-        ...formData.variants,
-        { name: '', description: '', price_modifier: '0', is_active: true },
-      ],
-    })
-  }
-
-  const updateVariant = (index: number, field: string, value: any) => {
-    const variants = [...formData.variants]
-    variants[index] = { ...variants[index], [field]: value }
-    setFormData({ ...formData, variants })
-  }
-
-  const removeVariant = (index: number) => {
-    setFormData({
-      ...formData,
-      variants: formData.variants.filter((_, i) => i !== index),
-    })
-  }
-
   const addImage = () => {
     setFormData({
       ...formData,
@@ -392,7 +383,48 @@ export default function NewProductPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
+            Collection Line *
+          </label>
+          <select
+            value={formData.collection}
+            onChange={(e) => {
+              const nextCollection = e.target.value
+              const valid = formData.product_category
+                ? isValidCategoryForCollection(nextCollection as CollectionId, formData.product_category)
+                : true
+              setFormData({
+                ...formData,
+                collection: nextCollection,
+                product_category: valid ? formData.product_category : '',
+              })
+            }}
+            className="w-full px-4 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all"
+          >
+            {COLLECTION_LIST.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
+            Product Category
+          </label>
+          <select
+            value={formData.product_category}
+            onChange={(e) => setFormData({ ...formData, product_category: e.target.value })}
+            className="w-full px-4 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all"
+          >
+            <option value="">— Select category —</option>
+            {getCategoriesForCollection(formData.collection as CollectionId).map((cat) => (
+              <option key={cat.slug} value={cat.slug}>{cat.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-white mb-2">
               Base Price *
@@ -409,6 +441,20 @@ export default function NewProductPage() {
 
           <div>
             <label className="block text-sm font-medium text-white mb-2">
+              Compare-at price
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.compare_at_price}
+              onChange={(e) => setFormData({ ...formData, compare_at_price: e.target.value })}
+              placeholder="Original price (optional)"
+              className="w-full px-4 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">
               Currency *
             </label>
             <select
@@ -416,9 +462,9 @@ export default function NewProductPage() {
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               className="w-full px-4 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
             >
-              <option value="AED" className="bg-stone-800">AED</option>
-              <option value="USD" className="bg-stone-800">USD</option>
-              <option value="GBP" className="bg-stone-800">GBP</option>
+              {PRODUCT_CURRENCIES.map((code) => (
+                <option key={code} value={code} className="bg-stone-800">{code}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -435,67 +481,14 @@ export default function NewProductPage() {
           </label>
         </div>
 
-        {/* Variants */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <label className="block text-sm font-medium text-white">Variants (Age Groups)</label>
-            <button
-              type="button"
-              onClick={addVariant}
-              className="text-sm text-[#DC143C] hover:text-[#b01030] transition-colors"
-            >
-              + Add Variant
-            </button>
-          </div>
-
-          {formData.variants.map((variant, index) => (
-            <div key={index} className="border border-stone-600/50 rounded-md p-4 mb-4 bg-stone-700/30">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Name *</label>
-                  <input
-                    type="text"
-                    value={variant.name}
-                    onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                    placeholder="e.g., U5-U7"
-                    className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Price Modifier</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={variant.price_modifier}
-                    onChange={(e) => updateVariant(index, 'price_modifier', e.target.value)}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
-                  />
-                </div>
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-white mb-1">Description</label>
-                <input
-                  type="text"
-                  value={variant.description}
-                  onChange={(e) => updateVariant(index, 'description', e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => removeVariant(index)}
-                className="text-sm text-[#DC143C] hover:text-[#b01030] transition-colors"
-              >
-                Remove Variant
-              </button>
-            </div>
-          ))}
-        </div>
+        <ApparelVariantEditor
+          variants={formData.variants}
+          onChange={(variants) => setFormData({ ...formData, variants })}
+        />
 
         {/* Images */}
         <div>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-2">
             <label className="block text-sm font-medium text-white">Product Images</label>
             <div className="flex space-x-2">
               <button
@@ -507,6 +500,9 @@ export default function NewProductPage() {
               </button>
             </div>
           </div>
+          <p className="text-xs text-stone-400 mb-4">
+            Optional — if empty, the storefront shows your collection placeholder (Admin → Visual → Product Placeholders).
+          </p>
 
           {/* File Upload */}
           <div className="border border-stone-600/50 rounded-md p-4 mb-4 bg-stone-700/30">

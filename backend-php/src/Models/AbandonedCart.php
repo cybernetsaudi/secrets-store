@@ -51,7 +51,7 @@ class AbandonedCart
                 [
                     json_encode($data['cart_data']),
                     $data['subtotal'] ?? 0,
-                    $data['currency'] ?? 'AED',
+                    $data['currency'] ?? 'PKR',
                     $data['discount_code'] ?? null,
                     $data['guest_name'] ?? null,
                     $data['guest_phone'] ?? null,
@@ -71,7 +71,7 @@ class AbandonedCart
                     $data['guest_phone'] ?? null,
                     json_encode($data['cart_data']),
                     $data['subtotal'] ?? 0,
-                    $data['currency'] ?? 'AED',
+                    $data['currency'] ?? 'PKR',
                     $data['discount_code'] ?? null,
                     $data['session_id'] ?? null,
                 ]

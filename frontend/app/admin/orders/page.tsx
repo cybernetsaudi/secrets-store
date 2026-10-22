@@ -10,9 +10,12 @@ interface Order {
   guest_name: string
   guest_email: string
   guest_phone?: string
-  player_name?: string
-  player_date_of_birth?: string
-  trial_coach_name?: string
+  shipping_address_line1?: string
+  shipping_address_line2?: string
+  shipping_city?: string
+  shipping_state?: string
+  shipping_postal_code?: string
+  shipping_country?: string
   total_amount: string
   currency: string
   status: string
@@ -1305,15 +1308,20 @@ export default function AdminOrdersPage() {
                   {selectedOrder.guest_phone && (
                     <p className="text-stone-300">Phone: {selectedOrder.guest_phone}</p>
                   )}
-                  {selectedOrder.player_name && (
+                  {selectedOrder.shipping_address_line1 && (
                     <>
-                      <h4 className="font-semibold text-white mb-1 mt-3">Player Information</h4>
-                      <p className="text-white">Name: {selectedOrder.player_name}</p>
-                      {selectedOrder.player_date_of_birth && (
-                        <p className="text-stone-300">DOB: {new Date(selectedOrder.player_date_of_birth).toLocaleDateString()}</p>
+                      <h4 className="font-semibold text-white mb-1 mt-3">Shipping Address</h4>
+                      <p className="text-white">{selectedOrder.shipping_address_line1}</p>
+                      {selectedOrder.shipping_address_line2 && (
+                        <p className="text-stone-300">{selectedOrder.shipping_address_line2}</p>
                       )}
-                      {selectedOrder.trial_coach_name && (
-                        <p className="text-stone-300">Trial Coach: {selectedOrder.trial_coach_name}</p>
+                      <p className="text-stone-300">
+                        {[selectedOrder.shipping_city, selectedOrder.shipping_state, selectedOrder.shipping_postal_code]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </p>
+                      {selectedOrder.shipping_country && (
+                        <p className="text-stone-300">{selectedOrder.shipping_country}</p>
                       )}
                     </>
                   )}

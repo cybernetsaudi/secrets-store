@@ -26,13 +26,20 @@ class OrderController
         
         if (!($data['no_refund_accepted'] ?? false)) {
             http_response_code(400);
-            return ['error' => 'No refund policy must be accepted'];
+            return ['error' => 'You must agree to the terms and conditions'];
+        }
+
+        $shipping = Order::shippingFromRequest($data);
+        $shippingError = Order::validateShippingData($shipping);
+        if ($shippingError !== null) {
+            http_response_code(400);
+            return ['error' => $shippingError];
         }
         
         // Calculate totals
-        $currency = $data['currency'] ?? 'AED';
+        $currency = $data['currency'] ?? 'PKR';
         $currencyService = new CurrencyService();
-        $fxRate = $currency !== 'AED' ? $currencyService->getRate('AED', $currency) : 1.0;
+        $fxRate = $currency !== 'PKR' ? $currencyService->getRate('PKR', $currency) : 1.0;
         
         $subtotal = 0;
         $items = [];
@@ -90,13 +97,10 @@ class OrderController
         $totalAmount = $taxableAmount + $vatAmount;
         
         // Create order
-        $order = Order::create([
+        $order = Order::create(array_merge([
             'guest_name' => $data['guest_name'],
             'guest_email' => $data['guest_email'],
             'guest_phone' => $data['guest_phone'],
-            'player_name' => $data['player_name'] ?? null,
-            'player_date_of_birth' => $data['player_date_of_birth'] ?? null,
-            'trial_coach_name' => $data['trial_coach_name'] ?? null,
             'subtotal' => $subtotal,
             'discount_amount' => $discountAmount,
             'discount_code_id' => $discountCode['id'] ?? null,
@@ -105,9 +109,9 @@ class OrderController
             'currency' => $currency,
             'fx_rate' => $fxRate,
             'payment_method' => $data['payment_method'],
-            'bank_account_id' => $data['bank_account_id'] ?? null, // Store selected bank account
+            'bank_account_id' => $data['bank_account_id'] ?? null,
             'no_refund_accepted' => true,
-        ]);
+        ], $shipping));
         
         // Create order items
         $unavailableProducts = [];
@@ -216,7 +220,7 @@ class OrderController
         if (!$paymentResult['success']) {
             // IMPORTANT: For Tabby/Tamara (BNPL), if a checkout URL exists, we should ALWAYS redirect
             // Even if the gateway returns an error status, if they provide a checkout URL, let them handle verification
-            if (in_array($data['payment_method'], ['tabby', 'tamara', 'ngenius']) && !empty($paymentResult['checkout_url'])) {
+            if (in_array($data['payment_method'], ['tabby', 'tamara', 'ngenius', 'safepay']) && !empty($paymentResult['checkout_url'])) {
                 // Tabby provided a checkout URL - allow redirect even if success=false
                 // This lets Tabby handle verification and rejection on their website
                 error_log("OrderController: Tabby returned checkout URL despite error - allowing redirect for order {$order['id']}");
@@ -241,7 +245,7 @@ class OrderController
         } else {
             $shouldCreatePaymentRecord = true;
             // Redirect-based / async confirmation methods stay pending until webhook/verification updates.
-            $paymentStatus = in_array($data['payment_method'], ['bank_transfer', 'tabby', 'tamara', 'ngenius']) ? 'pending' : 'completed';
+            $paymentStatus = in_array($data['payment_method'], ['bank_transfer', 'tabby', 'tamara', 'ngenius', 'safepay']) ? 'pending' : 'completed';
         }
         
         // Create payment record (for both successful and rejected Tabby payments)
@@ -339,9 +343,14 @@ class OrderController
             http_response_code(404);
             return ['error' => 'Order not found'];
         }
-        
-        // If BNPL / redirect payment is still pending, verify with gateway API
-        $order = \App\Services\RedirectPaymentVerifier::verifyOrderIfPending($order);
+
+        $returnStatus = strtolower(trim((string)($_GET['return_status'] ?? '')));
+        if (in_array($returnStatus, ['cancelled', 'canceled', 'failed', 'error'], true)) {
+            $order = \App\Services\RedirectPaymentVerifier::markExplicitFailureReturn($order, $returnStatus);
+        } else {
+            // If BNPL / redirect payment is still pending, verify with gateway API
+            $order = \App\Services\RedirectPaymentVerifier::verifyOrderIfPending($order);
+        }
         
         // Only return basic order info (no sensitive data)
         return [

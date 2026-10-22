@@ -24,11 +24,18 @@ class PaymentController
                 http_response_code(400);
                 return ['error' => 'Missing required fields: items and formData are required'];
             }
+
+            $shipping = Order::shippingFromRequest($data['formData']);
+            $shippingError = Order::validateShippingData($shipping);
+            if ($shippingError !== null) {
+                http_response_code(400);
+                return ['error' => $shippingError];
+            }
         
         // Calculate totals
-        $currency = $data['currency'] ?? 'AED';
+        $currency = $data['currency'] ?? 'PKR';
         $currencyService = new CurrencyService();
-        $fxRate = $currency !== 'AED' ? $currencyService->getRate('AED', $currency) : 1.0;
+        $fxRate = $currency !== 'PKR' ? $currencyService->getRate('PKR', $currency) : 1.0;
         
         $subtotal = 0;
         foreach ($data['items'] as $item) {
@@ -51,13 +58,10 @@ class PaymentController
         $totalAmount = $taxableAmount + $vatAmount;
         
         // Create order first
-        $order = Order::create([
+        $order = Order::create(array_merge([
             'guest_name' => $data['formData']['guest_name'],
             'guest_email' => $data['formData']['guest_email'],
             'guest_phone' => $data['formData']['guest_phone'],
-            'player_name' => $data['formData']['player_name'] ?? null,
-            'player_date_of_birth' => $data['formData']['player_date_of_birth'] ?? null,
-            'trial_coach_name' => $data['formData']['trial_coach_name'] ?? null,
             'subtotal' => $subtotal,
             'discount_amount' => $discountAmount,
             'discount_code_id' => $discountCode['id'] ?? null,
@@ -67,7 +71,7 @@ class PaymentController
             'fx_rate' => $fxRate,
             'payment_method' => 'stripe',
             'no_refund_accepted' => true,
-        ]);
+        ], $shipping));
         
         // Create order items
         foreach ($data['items'] as $item) {
@@ -591,6 +595,79 @@ class PaymentController
             return ['success' => true, 'message' => 'Webhook processed'];
         } catch (\Exception $e) {
             error_log('N-Genius webhook error: ' . $e->getMessage());
+            http_response_code(500);
+            return ['error' => 'Webhook processing failed'];
+        }
+    }
+
+    /**
+     * Handle Safepay webhook
+     * POST /api/webhooks/safepay
+     */
+    public function safepayWebhook(): array
+    {
+        try {
+            $payload = file_get_contents('php://input');
+            $data = json_decode($payload, true);
+
+            if (!$data) {
+                http_response_code(400);
+                return ['error' => 'Invalid payload'];
+            }
+
+            $gateway = PaymentGatewayFactory::getGateway('safepay');
+            if (!$gateway) {
+                http_response_code(500);
+                return ['error' => 'Gateway not configured'];
+            }
+
+            $handled = $gateway->handleWebhook($data);
+            if (!($handled['processed'] ?? false)) {
+                http_response_code(400);
+                return ['error' => $handled['error'] ?? 'Webhook not processed'];
+            }
+
+            $reference = $handled['reference'] ?? null;
+            $merchantOrderRef = $handled['merchant_order_reference'] ?? null;
+
+            $order = null;
+            if (is_string($merchantOrderRef) && $merchantOrderRef !== '') {
+                $order = Order::findByOrderNumber($merchantOrderRef);
+            }
+            if (!$order && is_string($reference) && $reference !== '') {
+                $payment = \App\Models\Payment::findByTransactionId($reference);
+                if ($payment) {
+                    $order = Order::find($payment['order_id']);
+                }
+            }
+
+            if (!$order) {
+                http_response_code(404);
+                return ['error' => 'Order not found'];
+            }
+
+            $status = $handled['status'] ?? 'pending';
+            if ($status === 'completed') {
+                Order::updateStatus($order['id'], 'paid', 'completed');
+                $paymentRecord = \App\Models\Payment::findByOrderAndGateway($order['id'], 'safepay');
+                if ($paymentRecord && !empty($paymentRecord['transaction_id'])) {
+                    \App\Models\Payment::updateStatus($paymentRecord['transaction_id'], 'completed');
+                }
+                $updatedOrder = Order::find($order['id']);
+                if ($updatedOrder) {
+                    \App\Services\PlayerOnboardingService::sendOnboardingData($updatedOrder);
+                }
+            } elseif ($status === 'failed') {
+                Order::updateStatus($order['id'], 'pending', 'failed');
+                $paymentRecord = \App\Models\Payment::findByOrderAndGateway($order['id'], 'safepay');
+                if ($paymentRecord && !empty($paymentRecord['transaction_id'])) {
+                    \App\Models\Payment::updateStatus($paymentRecord['transaction_id'], 'failed');
+                }
+            }
+
+            return ['success' => true, 'message' => 'Webhook processed'];
+        } catch (\Exception $e) {
+            error_log('Safepay webhook error: ' . $e->getMessage());
             http_response_code(500);
             return ['error' => 'Webhook processing failed'];
         }

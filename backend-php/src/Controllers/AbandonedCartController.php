@@ -34,7 +34,7 @@ class AbandonedCartController
             'guest_phone' => $data['guest_phone'] ?? null,
             'cart_data' => $data['cart_data'],
             'subtotal' => $data['subtotal'] ?? 0,
-            'currency' => $data['currency'] ?? 'AED',
+            'currency' => $data['currency'] ?? 'PKR',
             'discount_code' => $data['discount_code'] ?? null,
             'session_id' => session_id(),
         ]);

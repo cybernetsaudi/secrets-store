@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductImage;
 use App\Services\FileUploadService;
+use App\Services\VariantNormalizer;
 
 /**
  * Admin Product Management Controller
@@ -113,6 +114,10 @@ class AdminProductController
             }
         }
         
+        if (isset($data['variants']) && is_array($data['variants'])) {
+            $data['variants'] = VariantNormalizer::normalizeList($data['variants']);
+        }
+
         // Generate slug
         $slug = self::generateSlug($data['name']);
         
@@ -123,9 +128,18 @@ class AdminProductController
             'description' => $data['description'],
             'short_description' => $data['short_description'] ?? null,
             'base_price' => $data['base_price'],
-            'currency' => $data['currency'] ?? 'AED',
+            'currency' => $data['currency'] ?? 'PKR',
             'is_active' => $data['is_active'] ?? true,
+            'collection' => $data['collection'] ?? 'classic',
+            'product_category' => $data['product_category'] ?? null,
         ]);
+
+        if (array_key_exists('compare_at_price', $data)) {
+            Product::update((int) $product['id'], [
+                'compare_at_price' => $data['compare_at_price'],
+            ]);
+            $product = Product::findAdmin((int) $product['id']) ?: $product;
+        }
         
         // Create variants
         if (!empty($data['variants']) && is_array($data['variants'])) {
@@ -133,6 +147,10 @@ class AdminProductController
                 ProductVariant::create([
                     'product_id' => $product['id'],
                     'name' => $variantData['name'],
+                    'option_color' => $variantData['option_color'] ?? null,
+                    'option_size' => $variantData['option_size'] ?? null,
+                    'option_cup' => $variantData['option_cup'] ?? null,
+                    'swatch_image' => $variantData['swatch_image'] ?? null,
                     'description' => $variantData['description'] ?? null,
                     'price_modifier' => $variantData['price_modifier'] ?? 0,
                     'is_active' => $variantData['is_active'] ?? true,
@@ -223,6 +241,9 @@ class AdminProductController
         if (isset($data['base_price'])) $updateData['base_price'] = $data['base_price'];
         if (isset($data['currency'])) $updateData['currency'] = $data['currency'];
         if (isset($data['is_active'])) $updateData['is_active'] = $data['is_active'];
+        if (isset($data['collection'])) $updateData['collection'] = $data['collection'];
+        if (array_key_exists('product_category', $data)) $updateData['product_category'] = $data['product_category'] ?: null;
+        if (array_key_exists('compare_at_price', $data)) $updateData['compare_at_price'] = $data['compare_at_price'];
         
         if (!empty($updateData)) {
             if (isset($updateData['name']) && $updateData['name'] !== $product['name']) {
@@ -233,6 +254,7 @@ class AdminProductController
         
         // Update variants
         if (isset($data['variants']) && is_array($data['variants'])) {
+            $data['variants'] = VariantNormalizer::normalizeList($data['variants']);
             try {
                 // Get existing variants (including inactive ones)
                 $existingVariants = ProductVariant::getByProduct($id);
@@ -275,6 +297,10 @@ class AdminProductController
                         // Update existing variant
                         ProductVariant::update($variantId, [
                             'name' => $variantName,
+                            'option_color' => $variantData['option_color'] ?? null,
+                            'option_size' => $variantData['option_size'] ?? null,
+                            'option_cup' => $variantData['option_cup'] ?? null,
+                            'swatch_image' => $variantData['swatch_image'] ?? null,
                             'description' => $variantData['description'] ?? null,
                             'price_modifier' => floatval($variantData['price_modifier'] ?? 0),
                             'is_active' => $variantData['is_active'] ?? true,
@@ -287,6 +313,10 @@ class AdminProductController
                             $newVariant = ProductVariant::create([
                                 'product_id' => $id,
                                 'name' => $variantName,
+                                'option_color' => $variantData['option_color'] ?? null,
+                                'option_size' => $variantData['option_size'] ?? null,
+                                'option_cup' => $variantData['option_cup'] ?? null,
+                                'swatch_image' => $variantData['swatch_image'] ?? null,
                                 'description' => $variantData['description'] ?? null,
                                 'price_modifier' => floatval($variantData['price_modifier'] ?? 0),
                                 'is_active' => $variantData['is_active'] ?? true,
@@ -308,6 +338,10 @@ class AdminProductController
                                 if ($duplicateVariant) {
                                     ProductVariant::update($duplicateVariant['id'], [
                                         'name' => $variantName,
+                                        'option_color' => $variantData['option_color'] ?? null,
+                                        'option_size' => $variantData['option_size'] ?? null,
+                                        'option_cup' => $variantData['option_cup'] ?? null,
+                                        'swatch_image' => $variantData['swatch_image'] ?? null,
                                         'description' => $variantData['description'] ?? null,
                                         'price_modifier' => floatval($variantData['price_modifier'] ?? 0),
                                         'is_active' => $variantData['is_active'] ?? true,
@@ -338,8 +372,9 @@ class AdminProductController
             }
         }
         
-        // Handle images: upload first, only replace DB rows when we have images to save
+        // Handle images: upload first, replace or clear when images field is sent
         $imageErrors = [];
+        $imagesProvided = array_key_exists('images', $data);
         $urlImages = $this->collectUrlImagesFromData($data);
         $uploadFiles = $this->getUploadedProductImageFiles();
         $uploadedImages = [];
@@ -357,11 +392,13 @@ class AdminProductController
         $finalImages = $this->mergeProductImages($uploadedImages, $urlImages);
         if (!empty($finalImages)) {
             $this->persistProductImages($id, $finalImages);
+        } elseif ($imagesProvided && empty($uploadFiles)) {
+            ProductImage::deleteByProduct($id);
         } elseif (!empty($uploadFiles) && empty($finalImages)) {
             // Upload attempted but every file failed — keep existing images in DB
             error_log("AdminProductController::update - Image upload failed for product {$id}: " . implode('; ', $imageErrors));
         }
-        // If neither files nor URLs are provided, keep existing images
+        // If images field omitted entirely, keep existing images
         
             $response = $this->show($id);
             if (!empty($imageErrors)) {

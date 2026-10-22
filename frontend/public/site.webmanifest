@@ -1,6 +1,6 @@
 {
-  "name": "Gulf United FC Store",
-  "short_name": "GUFC Store",
+  "name": "GATVIA Secrets",
+  "short_name": "GATVIA",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -13,7 +13,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#DC143C",
-  "background_color": "#1c1917",
+  "theme_color": "#111827",
+  "background_color": "#ffffff",
   "display": "standalone"
 }

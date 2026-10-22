@@ -23,6 +23,7 @@ interface PaymentGateway {
   bank_address?: string
   staff_email?: string
   additional_config?: any
+  safepay_intent?: 'CYBERSOURCE' | 'MPGS'
 }
 
 interface BankAccount {
@@ -183,6 +184,7 @@ export default function PaymentGatewaysPage() {
           staff_email: fullGateway.staff_email || '',
           is_active: Boolean(fullGateway.is_active),
           is_test_mode: Boolean(fullGateway.is_test_mode),
+          safepay_intent: fullGateway.safepay_intent || 'CYBERSOURCE',
         })
       } else {
         // Fallback to masked data if fetch fails
@@ -267,6 +269,11 @@ export default function PaymentGatewaysPage() {
       if (formData.staff_email !== undefined) updateData.staff_email = formData.staff_email
       if (formData.is_active !== undefined) updateData.is_active = formData.is_active
       if (formData.is_test_mode !== undefined) updateData.is_test_mode = formData.is_test_mode
+      if (formData.safepay_intent) {
+        updateData.additional_config = {
+          safepay_intent: formData.safepay_intent,
+        }
+      }
       
       const response = await fetch(`${apiUrl}/admin/payment-gateways/${id}`, {
         method: 'PUT',
@@ -682,6 +689,41 @@ export default function PaymentGatewaysPage() {
                       </div>
                     )}
 
+                    {gateway.gateway_type === 'safepay' && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-white mb-2">
+                            Card processor intent
+                          </label>
+                          <select
+                            value={formData.safepay_intent || 'CYBERSOURCE'}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                safepay_intent: e.target.value as 'CYBERSOURCE' | 'MPGS',
+                              })
+                            }
+                            className="w-full px-4 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C]"
+                          >
+                            <option value="CYBERSOURCE">CYBERSOURCE (default — Visa 3DS)</option>
+                            <option value="MPGS">MPGS (Mastercard gateway — try if CyberSource fails)</option>
+                          </select>
+                        </div>
+                        <div className="rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-sm text-stone-200">
+                          <p className="font-medium text-white mb-1">Safepay Express Checkout</p>
+                          <p className="text-stone-300 text-xs">
+                            Public Key = Merchant API Key (sec_…). Secret Key signs API requests. Use Test Mode for sandbox keys.
+                          </p>
+                          <p className="text-stone-400 text-xs mt-2">
+                            Webhook URL: <code className="text-blue-200">https://secrets.gatvia.com/api/webhooks/safepay</code>
+                          </p>
+                          <p className="text-amber-200/90 text-xs mt-2">
+                            If checkout shows <code>PAYER_AUTH_SETUP</code> / CyberSource connection errors, Safepay&apos;s 3DS layer cannot reach apitest.cybersource.com — contact Safepay support to enable CyberSource on your sandbox merchant, or try MPGS above. Use Safepay dummy test cards only in sandbox.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {gateway.gateway_type === 'ngenius' && (
                       <div>
                         <label className="block text-sm font-medium text-white mb-2">
@@ -876,7 +918,7 @@ function BankAccountForm({
             value={formData.account_name || ''}
             onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
             className="w-full px-4 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
-            placeholder="e.g., Gulf United FC"
+            placeholder="e.g., GATVIA Secrets"
             required
           />
         </div>

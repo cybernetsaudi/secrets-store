@@ -6,64 +6,46 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { items, currency, discountCode, formData } = body
 
-    // Calculate total
-    let subtotal = 0
-    items.forEach((item: any) => {
-      subtotal += item.unitPrice * item.quantity
-    })
-
-    // Apply discount if any
-    let discountAmount = 0
-    if (discountCode) {
-      try {
-        const discount = await api.post('/discount/validate/', {
-          code: discountCode,
-          order_amount: subtotal,
-        })
-        if (discount.data.valid) {
-          discountAmount = parseFloat(discount.data.discount_amount)
-        }
-      } catch (error) {
-        // Discount invalid, continue without it
-      }
+    if (!formData?.shipping_address_line1 || !formData?.shipping_city || !formData?.shipping_country) {
+      return NextResponse.json(
+        { error: 'Shipping address is required' },
+        { status: 400 }
+      )
     }
 
-    const vatRate = 0.05
-    const taxableAmount = subtotal - discountAmount
-    const vatAmount = taxableAmount * vatRate
-    const totalAmount = taxableAmount + vatAmount
-
-    // Create payment intent via backend
     const checkoutData = {
       guest_name: formData.guest_name,
       guest_email: formData.guest_email,
       guest_phone: formData.guest_phone,
-      items: items.map((item: any) => ({
+      shipping_address_line1: formData.shipping_address_line1,
+      shipping_address_line2: formData.shipping_address_line2 || undefined,
+      shipping_city: formData.shipping_city,
+      shipping_state: formData.shipping_state || undefined,
+      shipping_postal_code: formData.shipping_postal_code || undefined,
+      shipping_country: formData.shipping_country || 'PK',
+      items: items.map((item: { product: { id: number }; variant?: { id: number }; quantity: number }) => ({
         product_id: item.product.id,
         variant_id: item.variant?.id,
         quantity: item.quantity,
       })),
       payment_method: 'stripe',
       payment_data: {},
-      currency: currency,
+      currency: currency || 'PKR',
       discount_code: discountCode || undefined,
       no_refund_accepted: true,
     }
 
-    // This will create the order and payment intent
     const order = await api.post('/checkout/', checkoutData)
 
-    // Return client secret for Stripe
     return NextResponse.json({
       clientSecret: order.data.payment_data?.client_secret,
       orderId: order.data.id,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { error?: string } } }
     return NextResponse.json(
-      { error: error.response?.data?.error || 'Failed to create payment intent' },
+      { error: err.response?.data?.error || 'Failed to create payment intent' },
       { status: 400 }
     )
   }
 }
-
-

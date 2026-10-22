@@ -203,7 +203,7 @@ export default function AdminDashboard() {
             <div>
               <p className="text-sm text-stone-300">Total Revenue</p>
               <p className="text-2xl md:text-3xl font-bold text-white mt-2 tracking-wider">
-                {revenueVisible ? `AED ${stats.totalRevenue.toFixed(2)}` : '*********'}
+                {revenueVisible ? `PKR ${stats.totalRevenue.toFixed(2)}` : '*********'}
               </p>
             </div>
             <button

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { setCsrfToken } from '@/lib/adminApi'
+import { getApiUrl } from '@/lib/utils'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -30,7 +31,7 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+      const apiUrl = getApiUrl()
       const response = await fetch(`${apiUrl}/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,7 +76,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     const fetchVisualSettings = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+        const apiUrl = getApiUrl()
         const response = await fetch(`${apiUrl}/settings/visual`)
         if (response.ok) {
           const data = await response.json()
@@ -128,11 +129,11 @@ export default function AdminLoginPage() {
       <div className="relative flex items-center justify-center min-h-screen p-4" style={{ zIndex: 1 }}>
         <div className="md:rounded-[40px] md:p-16 lg:p-24 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl max-w-md w-full shadow-2xl">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#DC143C] to-[#003366] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-white font-bold text-2xl">GU</span>
+            <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-white font-bold text-2xl">GV</span>
             </div>
             <h1 className="text-2xl font-bold text-white">Admin Login</h1>
-            <p className="text-stone-300 mt-2">Gulf United FC Admin Panel</p>
+            <p className="text-stone-300 mt-2">GATVIA Secrets Store</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -145,7 +146,7 @@ export default function AdminLoginPage() {
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-stone-600 rounded-lg bg-stone-700/50 text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
+                className="w-full px-4 py-2 border border-stone-600 rounded-lg bg-stone-700/50 text-white placeholder-stone-400 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all"
                 placeholder="Enter username"
               />
             </div>
@@ -159,7 +160,7 @@ export default function AdminLoginPage() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-stone-600 rounded-lg bg-stone-700/50 text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
+                className="w-full px-4 py-2 border border-stone-600 rounded-lg bg-stone-700/50 text-white placeholder-stone-400 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all"
                 placeholder="Enter password"
               />
             </div>
@@ -167,7 +168,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white py-3 px-6 rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-105"
+              className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white py-3 px-6 rounded-lg hover:from-fuchsia-600 hover:to-violet-600 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-105"
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
@@ -176,7 +177,7 @@ export default function AdminLoginPage() {
           <div className="mt-6 text-center">
             <a
               href="/"
-              className="text-sm text-stone-300 hover:text-[#DC143C] transition-colors"
+              className="text-sm text-stone-300 hover:text-violet-300 transition-colors"
             >
               ← Back to Store
             </a>

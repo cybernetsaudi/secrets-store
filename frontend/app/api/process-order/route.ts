@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      order_number: `GUFC-${Date.now()}`,
+      order_number: `GS-${Date.now()}`,
     })
   } catch (error: any) {
     return NextResponse.json(

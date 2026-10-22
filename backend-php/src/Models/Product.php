@@ -145,19 +145,57 @@ class Product
      */
     public static function create(array $data): array
     {
-        Database::query(
-            "INSERT INTO products (name, slug, description, short_description, base_price, currency, is_active) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [
-                $data['name'],
-                $data['slug'],
-                $data['description'],
-                $data['short_description'] ?? null,
-                $data['base_price'],
-                $data['currency'] ?? 'AED',
-                ($data['is_active'] ?? true) ? 1 : 0,
-            ]
-        );
+        $hasCollection = self::columnExists('collection');
+        $hasCategory = self::columnExists('product_category');
+        $collection = $data['collection'] ?? 'classic';
+        $category = $data['product_category'] ?? null;
+
+        if ($hasCollection && $hasCategory) {
+            Database::query(
+                "INSERT INTO products (name, slug, description, short_description, base_price, currency, is_active, collection, product_category) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                    $data['name'],
+                    $data['slug'],
+                    $data['description'],
+                    $data['short_description'] ?? null,
+                    $data['base_price'],
+                    $data['currency'] ?? 'PKR',
+                    ($data['is_active'] ?? true) ? 1 : 0,
+                    $collection,
+                    $category,
+                ]
+            );
+        } elseif ($hasCollection) {
+            Database::query(
+                "INSERT INTO products (name, slug, description, short_description, base_price, currency, is_active, collection) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                    $data['name'],
+                    $data['slug'],
+                    $data['description'],
+                    $data['short_description'] ?? null,
+                    $data['base_price'],
+                    $data['currency'] ?? 'PKR',
+                    ($data['is_active'] ?? true) ? 1 : 0,
+                    $collection,
+                ]
+            );
+        } else {
+            Database::query(
+                "INSERT INTO products (name, slug, description, short_description, base_price, currency, is_active) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [
+                    $data['name'],
+                    $data['slug'],
+                    $data['description'],
+                    $data['short_description'] ?? null,
+                    $data['base_price'],
+                    $data['currency'] ?? 'PKR',
+                    ($data['is_active'] ?? true) ? 1 : 0,
+                ]
+            );
+        }
         
         $id = Database::getInstance()->lastInsertId();
         return self::findAdmin($id) ?: [];
@@ -191,6 +229,12 @@ class Product
             $updates[] = "base_price = ?";
             $params[] = $data['base_price'];
         }
+        if (array_key_exists('compare_at_price', $data) && self::columnExists('compare_at_price')) {
+            $updates[] = "compare_at_price = ?";
+            $params[] = $data['compare_at_price'] !== '' && $data['compare_at_price'] !== null
+                ? $data['compare_at_price']
+                : null;
+        }
         if (isset($data['currency'])) {
             $updates[] = "currency = ?";
             $params[] = $data['currency'];
@@ -198,6 +242,14 @@ class Product
         if (isset($data['is_active'])) {
             $updates[] = "is_active = ?";
             $params[] = $data['is_active'] ? 1 : 0;
+        }
+        if (isset($data['collection']) && self::columnExists('collection')) {
+            $updates[] = "collection = ?";
+            $params[] = $data['collection'];
+        }
+        if (array_key_exists('product_category', $data) && self::columnExists('product_category')) {
+            $updates[] = "product_category = ?";
+            $params[] = $data['product_category'] ?: null;
         }
         
         if (!empty($updates)) {

@@ -3,6 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { COLLECTION_LIST, CollectionId } from '@/lib/collections'
+import { getCategoriesForCollection, isValidCategoryForCollection } from '@/lib/categories'
+import { PRODUCT_CURRENCIES } from '@/lib/currency'
+import ApparelVariantEditor, { VariantFormRow } from '@/components/admin/ApparelVariantEditor'
+import { buildVariantDisplayName } from '@/lib/productVariants'
 
 const MAX_PRODUCT_IMAGE_BYTES = 10 * 1024 * 1024
 
@@ -26,10 +31,13 @@ export default function EditProductPage() {
     name: '',
     description: '',
     short_description: '',
+    collection: 'classic',
+    product_category: '',
     base_price: '',
-    currency: 'AED',
+    compare_at_price: '',
+    currency: 'PKR',
     is_active: true,
-    variants: [] as Array<{ id?: number; name: string; description: string; price_modifier: string; is_active: boolean }>,
+    variants: [] as VariantFormRow[],
     images: [] as Array<{ id?: number; url: string; alt_text: string; file?: File }>,
   })
 
@@ -103,8 +111,11 @@ export default function EditProductPage() {
           name: product.name || '',
           description: product.description || '',
           short_description: product.short_description || '',
+          collection: product.collection || 'classic',
+          product_category: product.product_category || '',
           base_price: product.base_price?.toString() || '',
-          currency: product.currency || 'AED',
+          compare_at_price: product.compare_at_price?.toString() || '',
+          currency: product.currency || 'PKR',
           is_active: Boolean(product.is_active),
           variants: product.variants?.map((v: any) => ({
             id: v.id,
@@ -112,6 +123,10 @@ export default function EditProductPage() {
             description: v.description || '',
             price_modifier: v.price_modifier?.toString() || '0',
             is_active: Boolean(v.is_active),
+            option_color: v.option_color || '',
+            option_size: v.option_size || '',
+            option_cup: v.option_cup || '',
+            swatch_image: v.swatch_image || '',
           })) || [],
           images: product.images?.map((img: any) => {
             // Backend returns `image` column; normalise to `url` for the form
@@ -167,18 +182,21 @@ export default function EditProductPage() {
       return false
     }
     
-    // Validate at least one image (URL or file), allow existing relative URLs
-    const hasImages = formData.images.some(img => (img.url && img.url.trim() !== '') || img.file)
-    if (!hasImages) {
-      toast.error('At least one product image is required')
-      return false
-    }
+    // Images optional — collection placeholder used on storefront when none uploaded
     
     // Validate variants if any
     for (let i = 0; i < formData.variants.length; i++) {
       const variant = formData.variants[i]
-      if (!variant.name || variant.name.trim() === '') {
-        toast.error(`Variant ${i + 1}: Name is required`)
+      const label =
+        variant.option_color?.trim() ||
+        variant.name?.trim() ||
+        buildVariantDisplayName(
+          variant.option_color,
+          variant.option_size,
+          variant.option_cup
+        )
+      if (!label) {
+        toast.error(`Variant ${i + 1}: Name or color is required`)
         return false
       }
       const priceMod = parseFloat(variant.price_modifier)
@@ -225,16 +243,13 @@ export default function EditProductPage() {
         formDataToSend.append('name', formData.name)
         formDataToSend.append('description', formData.description)
         formDataToSend.append('short_description', formData.short_description || '')
+        formDataToSend.append('collection', formData.collection)
+        formDataToSend.append('product_category', formData.product_category || '')
         formDataToSend.append('base_price', formData.base_price)
+        formDataToSend.append('compare_at_price', formData.compare_at_price || '')
         formDataToSend.append('currency', formData.currency)
         formDataToSend.append('is_active', formData.is_active.toString())
-        formDataToSend.append('variants', JSON.stringify(formData.variants.map((v) => ({
-          id: v.id,
-          name: v.name,
-          description: v.description,
-          price_modifier: parseFloat(v.price_modifier),
-          is_active: v.is_active,
-        }))))
+        formDataToSend.append('variants', JSON.stringify(formData.variants))
         
         // Add URL images as JSON
         formDataToSend.append('images', JSON.stringify(imageUrls.map((img) => ({
@@ -314,16 +329,15 @@ export default function EditProductPage() {
             name: formData.name,
             description: formData.description,
             short_description: formData.short_description,
+            collection: formData.collection,
+            product_category: formData.product_category || null,
             base_price: parseFloat(formData.base_price),
+            compare_at_price: formData.compare_at_price
+              ? parseFloat(formData.compare_at_price)
+              : null,
             currency: formData.currency,
             is_active: formData.is_active,
-            variants: formData.variants.map((v) => ({
-              id: v.id,
-              name: v.name,
-              description: v.description,
-              price_modifier: parseFloat(v.price_modifier),
-              is_active: v.is_active,
-            })),
+            variants: formData.variants,
             images: imageUrls.map((img) => ({
               url: img.url,
               alt_text: img.alt_text,
@@ -350,28 +364,6 @@ export default function EditProductPage() {
     }
   }
 
-  const addVariant = () => {
-    setFormData({
-      ...formData,
-      variants: [
-        ...formData.variants,
-        { name: '', description: '', price_modifier: '0', is_active: true },
-      ],
-    })
-  }
-
-  const updateVariant = (index: number, field: string, value: any) => {
-    const variants = [...formData.variants]
-    variants[index] = { ...variants[index], [field]: value }
-    setFormData({ ...formData, variants })
-  }
-
-  const removeVariant = (index: number) => {
-    setFormData({
-      ...formData,
-      variants: formData.variants.filter((_, i) => i !== index),
-    })
-  }
 
   const addImage = () => {
     setFormData({
@@ -472,6 +464,43 @@ export default function EditProductPage() {
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-white mb-1">Collection Line</label>
+          <select
+            value={formData.collection}
+            onChange={(e) => {
+              const nextCollection = e.target.value
+              const valid = formData.product_category
+                ? isValidCategoryForCollection(nextCollection as CollectionId, formData.product_category)
+                : true
+              setFormData({
+                ...formData,
+                collection: nextCollection,
+                product_category: valid ? formData.product_category : '',
+              })
+            }}
+            className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all"
+          >
+            {COLLECTION_LIST.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-1">Product Category</label>
+          <select
+            value={formData.product_category}
+            onChange={(e) => setFormData({ ...formData, product_category: e.target.value })}
+            className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all"
+          >
+            <option value="">— Select category —</option>
+            {getCategoriesForCollection(formData.collection as CollectionId).map((cat) => (
+              <option key={cat.slug} value={cat.slug}>{cat.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-white mb-1">Description</label>
           <textarea
             value={formData.description}
@@ -481,7 +510,7 @@ export default function EditProductPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-white mb-1">Base Price *</label>
             <input
@@ -494,15 +523,26 @@ export default function EditProductPage() {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-white mb-1">Compare-at price</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.compare_at_price}
+              onChange={(e) => setFormData({ ...formData, compare_at_price: e.target.value })}
+              placeholder="Optional"
+              className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-white mb-1">Currency *</label>
             <select
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
               className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
             >
-              <option value="AED" className="bg-stone-800">AED</option>
-              <option value="USD" className="bg-stone-800">USD</option>
-              <option value="GBP" className="bg-stone-800">GBP</option>
+              {PRODUCT_CURRENCIES.map((code) => (
+                <option key={code} value={code} className="bg-stone-800">{code}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -520,77 +560,14 @@ export default function EditProductPage() {
           </label>
         </div>
 
-        {/* Variants */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">Variants</h2>
-            <button
-              type="button"
-              onClick={addVariant}
-              className="px-4 py-2 bg-gradient-to-r from-[#003366] to-[#004080] text-white rounded-md hover:from-[#004080] hover:to-[#003366] text-sm transition-all duration-300"
-            >
-              + Add Variant
-            </button>
-          </div>
-
-          {formData.variants.map((variant, index) => (
-            <div key={index} className="border border-stone-600/50 rounded-md p-4 mb-4 bg-stone-700/30">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Variant Name *</label>
-                  <input
-                    type="text"
-                    value={variant.name}
-                    onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Price Modifier</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={variant.price_modifier}
-                    onChange={(e) => updateVariant(index, 'price_modifier', e.target.value)}
-                    className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
-                  />
-                </div>
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-white mb-1">Description</label>
-                <textarea
-                  value={variant.description}
-                  onChange={(e) => updateVariant(index, 'description', e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={variant.is_active}
-                    onChange={(e) => updateVariant(index, 'is_active', e.target.checked)}
-                    className="h-4 w-4 text-[#DC143C] focus:ring-[#DC143C] border-stone-600 rounded bg-stone-700/50"
-                  />
-                  <span className="ml-2 text-sm text-white">Active</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => removeVariant(index)}
-                  className="text-sm text-[#DC143C] hover:text-[#b01030] transition-colors"
-                >
-                  Remove Variant
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ApparelVariantEditor
+          variants={formData.variants}
+          onChange={(variants) => setFormData({ ...formData, variants })}
+        />
 
         {/* Images */}
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <h2 className="text-xl font-semibold text-white">Images</h2>
             <button
               type="button"
@@ -600,6 +577,9 @@ export default function EditProductPage() {
               + Add Image URL
             </button>
           </div>
+          <p className="text-xs text-stone-400 mb-4">
+            Optional — if empty, the storefront shows your collection placeholder (Admin → Visual → Product Placeholders).
+          </p>
 
           {/* File Upload */}
           <div className="border border-stone-600/50 rounded-md p-4 mb-4 bg-stone-700/30">

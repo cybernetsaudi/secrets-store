@@ -81,7 +81,7 @@ class AdminOrderController
         
         // Enhance orders with payment and rejection info
         foreach ($orders as &$order) {
-            if (in_array($order['payment_method'] ?? '', ['tabby', 'tamara', 'ngenius'], true)
+            if (in_array($order['payment_method'] ?? '', ['tabby', 'tamara', 'ngenius', 'safepay'], true)
                 && ($order['payment_status'] ?? '') === 'pending'
                 && ($order['status'] ?? '') === 'pending') {
                 $order = \App\Services\RedirectPaymentVerifier::verifyOrderIfPending($order);

@@ -39,17 +39,22 @@ class FileUploadService
                 mkdir($logoDir, 0755, true);
             }
             
-            // Generate unique filename
-            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $filename = $type . '_' . time() . '_' . uniqid() . '.' . $extension;
+            $baseName = $type . '_' . time() . '_' . uniqid();
+            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION) ?: 'jpg');
+            $filename = $baseName . '.' . $extension;
             $filepath = $logoDir . '/' . $filename;
             
-            // Move uploaded file
             if (!move_uploaded_file($file['tmp_name'], $filepath)) {
                 return ['success' => false, 'error' => 'Failed to save uploaded file'];
             }
-            
-            // Generate public URL
+
+            $saved = self::compressUploadedImage($filepath, $logoDir, $baseName);
+            if (!$saved['success']) {
+                return ['success' => false, 'error' => $saved['error'] ?? 'Image optimization failed'];
+            }
+
+            $filepath = $saved['path'];
+            $filename = basename($filepath);
             $publicUrl = '/api/uploads/logos/' . $filename;
             
             return [
@@ -85,17 +90,22 @@ class FileUploadService
                 mkdir($imageDir, 0755, true);
             }
             
-            // Generate unique filename
-            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $filename = 'product_' . $productId . '_' . time() . '_' . uniqid() . '.' . $extension;
+            $baseName = 'product_' . $productId . '_' . time() . '_' . uniqid();
+            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION) ?: 'jpg');
+            $filename = $baseName . '.' . $extension;
             $filepath = $imageDir . '/' . $filename;
             
-            // Move uploaded file
             if (!move_uploaded_file($file['tmp_name'], $filepath)) {
                 return ['success' => false, 'error' => 'Failed to save uploaded file'];
             }
-            
-            // Generate public URL
+
+            $saved = self::compressUploadedImage($filepath, $imageDir, $baseName);
+            if (!$saved['success']) {
+                return ['success' => false, 'error' => $saved['error'] ?? 'Image optimization failed'];
+            }
+
+            $filepath = $saved['path'];
+            $filename = basename($filepath);
             $publicUrl = '/api/uploads/products/' . $filename;
             
             return [
@@ -110,6 +120,35 @@ class FileUploadService
         }
     }
     
+  /**
+   * Resize to max 1920px wide and store as WebP.
+   *
+   * @return array{success: bool, path?: string, error?: string}
+   */
+    private static function compressUploadedImage(
+        string $sourcePath,
+        string $targetDir,
+        string $baseName
+    ): array {
+        $webpPath = $targetDir . '/' . $baseName . '.webp';
+        $optimized = ImageOptimizer::optimizeToWebp($sourcePath, $webpPath);
+
+        if ($optimized['success']) {
+            return ['success' => true, 'path' => $optimized['path']];
+        }
+
+        error_log(
+            'FileUploadService::compressUploadedImage fallback: ' .
+            ($optimized['error'] ?? 'unknown error')
+        );
+
+        if (is_file($sourcePath)) {
+            return ['success' => true, 'path' => $sourcePath];
+        }
+
+        return ['success' => false, 'error' => $optimized['error'] ?? 'Image optimization failed'];
+    }
+
     /**
      * Validate uploaded file
      */

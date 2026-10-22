@@ -20,7 +20,7 @@ interface TabbyCardProps {
  */
 export default function TabbyCard({
   price,
-  currency = 'AED',
+  currency = 'PKR',
   lang = 'en',
   shouldInheritBg = false,
   publicKey,

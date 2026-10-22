@@ -8,6 +8,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use App\Core\Router;
 use App\Core\Database;
+use App\Core\Auth;
 use App\Core\LoggingMiddleware;
 use App\Services\RateLimiter;
 use Dotenv\Dotenv;
@@ -18,10 +19,8 @@ if (file_exists(__DIR__ . '/.env')) {
     $dotenv->load();
 }
 
-// Start session for admin authentication
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Start session for admin authentication (secure cookie params)
+Auth::startSession();
 
 // Set error reporting - always disabled in production
 $debug = ($_ENV['DEBUG'] ?? '0') === '1' || ($_ENV['DEBUG'] ?? '0') === 'true';

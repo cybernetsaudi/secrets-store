@@ -54,6 +54,7 @@ $router->post('/webhooks/stripe', [PaymentController::class , 'stripeWebhook']);
 $router->post('/webhooks/tabby', [PaymentController::class , 'tabbyWebhook']);
 $router->post('/webhooks/tamara', [PaymentController::class , 'tamaraWebhook']);
 $router->post('/webhooks/ngenius', [PaymentController::class , 'ngeniusWebhook']);
+$router->post('/webhooks/safepay', [PaymentController::class , 'safepayWebhook']);
 
 // Email
 $router->post('/email/staff', [EmailController::class , 'sendToStaff']);
@@ -262,6 +263,12 @@ $router->get('/admin/deploy/status', function () {
     return $controller->status();
 });
 
+$router->post('/admin/deploy/migrate-db', function () {
+    Auth::requireAuth();
+    $controller = new AdminDeployController();
+    return $controller->migrateDatabase();
+});
+
 $router->post('/admin/settings/github-token', function () {
     Auth::requireAuth();
     $controller = new AdminDeployController();
@@ -328,23 +335,37 @@ $router->post('/admin/settings/visual/upload', function () {
 
 // Public Visual Settings (for landing page and products page)
 $router->get('/settings/visual', function () {
-    $controller = new AdminSettingsController();
+    $getImages = function ($key) {
+        $value = \App\Models\Setting::get($key, '');
+        if (empty($value)) {
+            return [];
+        }
+        $decoded = json_decode($value, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return $decoded;
+        }
+        return $value ? [$value] : [];
+    };
+
     return [
-    'landing_bg_image_url' => \App\Models\Setting::get('landing_bg_image_url', ''),
-    'products_bg_image_url' => \App\Models\Setting::get('products_bg_image_url', ''),
-    'landing_tile_1_image' => \App\Models\Setting::get('landing_tile_1_image', ''),
-    'landing_tile_2_image' => \App\Models\Setting::get('landing_tile_2_image', ''),
-    'landing_tile_3_image' => \App\Models\Setting::get('landing_tile_3_image', ''),
-    'landing_tile_4_image' => \App\Models\Setting::get('landing_tile_4_image', ''),
-    'landing_tile_5_image' => \App\Models\Setting::get('landing_tile_5_image', ''),
-    'landing_tile_6_image' => \App\Models\Setting::get('landing_tile_6_image', ''),
-    // Filter settings
-    'landing_bg_contrast' => \App\Models\Setting::get('landing_bg_contrast', '1'),
-    'landing_bg_saturation' => \App\Models\Setting::get('landing_bg_saturation', '1'),
-    'landing_bg_brightness' => \App\Models\Setting::get('landing_bg_brightness', '0.7'),
-    'products_bg_contrast' => \App\Models\Setting::get('products_bg_contrast', '1'),
-    'products_bg_saturation' => \App\Models\Setting::get('products_bg_saturation', '1'),
-    'products_bg_brightness' => \App\Models\Setting::get('products_bg_brightness', '0.7'),
+        'landing_bg_image_url' => $getImages('landing_bg_image_url'),
+        'products_bg_image_url' => \App\Models\Setting::get('products_bg_image_url', ''),
+        'landing_tile_1_image' => $getImages('landing_tile_1_image'),
+        'landing_tile_2_image' => $getImages('landing_tile_2_image'),
+        'landing_tile_3_image' => $getImages('landing_tile_3_image'),
+        'landing_tile_4_image' => $getImages('landing_tile_4_image'),
+        'landing_tile_5_image' => $getImages('landing_tile_5_image'),
+        'landing_tile_6_image' => $getImages('landing_tile_6_image'),
+        'landing_bg_contrast' => \App\Models\Setting::get('landing_bg_contrast', '1'),
+        'landing_bg_saturation' => \App\Models\Setting::get('landing_bg_saturation', '1'),
+        'landing_bg_brightness' => \App\Models\Setting::get('landing_bg_brightness', '0.7'),
+        'products_bg_contrast' => \App\Models\Setting::get('products_bg_contrast', '1'),
+        'products_bg_saturation' => \App\Models\Setting::get('products_bg_saturation', '1'),
+        'products_bg_brightness' => \App\Models\Setting::get('products_bg_brightness', '0.7'),
+        'product_placeholder_classic_url' => \App\Models\Setting::get('product_placeholder_classic_url', ''),
+        'product_placeholder_premium_url' => \App\Models\Setting::get('product_placeholder_premium_url', ''),
+        'product_placeholder_designer_url' => \App\Models\Setting::get('product_placeholder_designer_url', ''),
+        'product_placeholder_limited_url' => \App\Models\Setting::get('product_placeholder_limited_url', ''),
     ];
 });
 

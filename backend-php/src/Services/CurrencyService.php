@@ -50,7 +50,7 @@ class CurrencyService
     
     private function fetchFromAPI(string $from, string $to): ?float
     {
-        $apiUrl = $_ENV['FX_RATE_API_URL'] ?? 'https://api.exchangerate-api.com/v4/latest/AED';
+        $apiUrl = $_ENV['FX_RATE_API_URL'] ?? 'https://api.exchangerate-api.com/v4/latest/PKR';
         
         try {
             $ch = curl_init($apiUrl);
@@ -62,7 +62,7 @@ class CurrencyService
             if ($response) {
                 $data = json_decode($response, true);
                 $rates = $data['rates'] ?? [];
-                $base = $data['base'] ?? 'AED';
+                $base = $data['base'] ?? 'PKR';
                 
                 if ($base === $from) {
                     return floatval($rates[$to] ?? 1.0);

@@ -50,11 +50,12 @@ function sendAbandonedCartEmail(array $cart): bool
     $password = $encryptedPassword ? base64_decode($encryptedPassword) : '';
     
     // Build email content
-    $subject = 'Complete Your Gulf United FC Purchase';
+    $brandName = Setting::get('email_from_name', 'GATVIA Secrets');
+    $subject = "Complete your {$brandName} order";
     $cartUrl = 'https://secrets.gatvia.com/cart/';
     
     $message = "Hello {$name},\n\n";
-    $message .= "We noticed you started shopping at Gulf United FC but didn't complete your purchase.\n\n";
+    $message .= "We noticed you started shopping at {$brandName} but didn't complete your purchase.\n\n";
     $message .= "Your cart is still waiting for you!\n\n";
     
     if (!empty($cartData)) {
@@ -75,9 +76,9 @@ function sendAbandonedCartEmail(array $cart): bool
     
     $message .= "\n";
     $message .= "Complete your purchase now: {$cartUrl}\n\n";
-    $message .= "Thank you for choosing Gulf United FC!\n\n";
+    $message .= "Thank you for shopping with {$brandName}!\n\n";
     $message .= "Best regards,\n";
-    $message .= "Gulf United FC Team";
+    $message .= "{$brandName} Team";
     
     // Send email
     $headers = "From: {$from}\r\n";

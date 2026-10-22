@@ -10,6 +10,21 @@ use App\Core\Database;
  */
 class PaymentGateway
 {
+    private static function mergeJsonConfig(array $gateway): array
+    {
+        foreach (['config', 'additional_config'] as $field) {
+            if (!isset($gateway[$field]) || !is_string($gateway[$field]) || $gateway[$field] === '') {
+                continue;
+            }
+            $config = json_decode($gateway[$field], true);
+            if (is_array($config)) {
+                $gateway = array_merge($gateway, $config);
+            }
+        }
+
+        return $gateway;
+    }
+
     /**
      * Get all payment gateways
      */
@@ -17,18 +32,11 @@ class PaymentGateway
     {
         $stmt = Database::query("SELECT * FROM payment_gateways ORDER BY gateway_name");
         $gateways = $stmt->fetchAll();
-        
-        // Parse config JSON field if it exists
+
         foreach ($gateways as &$gateway) {
-            if (isset($gateway['config']) && is_string($gateway['config']) && !empty($gateway['config'])) {
-                $config = json_decode($gateway['config'], true);
-                if (is_array($config)) {
-                    // Merge config fields into gateway array
-                    $gateway = array_merge($gateway, $config);
-                }
-            }
+            $gateway = self::mergeJsonConfig($gateway);
         }
-        
+
         return $gateways;
     }
 
@@ -41,16 +49,9 @@ class PaymentGateway
         $result = $stmt->fetch();
         
         if ($result) {
-            // Parse config JSON field if it exists
-            if (isset($result['config']) && is_string($result['config']) && !empty($result['config'])) {
-                $config = json_decode($result['config'], true);
-                if (is_array($config)) {
-                    // Merge config fields into result array
-                    $result = array_merge($result, $config);
-                }
-            }
+            $result = self::mergeJsonConfig($result);
         }
-        
+
         return $result ?: null;
     }
 
@@ -74,13 +75,7 @@ class PaymentGateway
         $result = $stmt->fetch();
 
         if ($result) {
-            // Parse config JSON field if it exists
-            if (isset($result['config']) && is_string($result['config']) && !empty($result['config'])) {
-                $config = json_decode($result['config'], true);
-                if (is_array($config)) {
-                    $result = array_merge($result, $config);
-                }
-            }
+            $result = self::mergeJsonConfig($result);
         }
 
         return $result ?: null;

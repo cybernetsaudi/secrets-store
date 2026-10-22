@@ -11,7 +11,44 @@ use App\Models\Payment;
  */
 class RedirectPaymentVerifier
 {
-    private const REDIRECT_GATEWAYS = ['tabby', 'tamara', 'ngenius'];
+    private const REDIRECT_GATEWAYS = ['tabby', 'tamara', 'ngenius', 'safepay'];
+
+    private const EXPLICIT_FAILURE_RETURNS = ['cancelled', 'canceled', 'failed', 'error'];
+
+    /**
+     * Customer returned from gateway cancel/failure URL — mark pending payment as failed.
+     */
+    public static function markExplicitFailureReturn(array $order, string $returnStatus): array
+    {
+        $orderId = (int)($order['id'] ?? 0);
+        if ($orderId <= 0) {
+            return $order;
+        }
+
+        $normalized = strtolower(trim($returnStatus));
+        if (!in_array($normalized, self::EXPLICIT_FAILURE_RETURNS, true)) {
+            return $order;
+        }
+
+        if (($order['payment_status'] ?? '') !== 'pending') {
+            return $order;
+        }
+
+        $gatewayType = (string)($order['payment_method'] ?? '');
+        $payment = Payment::findByOrderAndGateway($orderId, $gatewayType);
+        $transactionId = $payment['transaction_id'] ?? null;
+
+        if ($transactionId) {
+            Payment::updateStatus((string)$transactionId, 'failed');
+        }
+
+        $orderStatus = in_array($normalized, ['cancelled', 'canceled'], true) ? 'cancelled' : 'pending';
+        Order::updateStatus($orderId, $orderStatus, 'failed');
+
+        error_log("RedirectPaymentVerifier: order {$order['order_number']} marked {$orderStatus}/failed (return_status={$normalized})");
+
+        return Order::find($orderId) ?: $order;
+    }
 
     /**
      * If order is pending, check gateway API and update local status when paid/failed.
@@ -35,12 +72,22 @@ class RedirectPaymentVerifier
         }
 
         $paymentStmt = Database::query(
-            "SELECT * FROM payments WHERE order_id = ? AND gateway = ? ORDER BY created_at DESC LIMIT 1",
+            "SELECT * FROM payments WHERE order_id = ? AND (gateway = ? OR gateway = '' OR gateway IS NULL)
+             ORDER BY created_at DESC LIMIT 1",
             [$orderId, $gatewayType]
         );
         $payment = $paymentStmt->fetch();
         if (!$payment || empty($payment['transaction_id'])) {
             return $order;
+        }
+
+        // Backfill gateway when legacy enum rejected safepay on insert
+        if (empty($payment['gateway']) && $gatewayType !== '') {
+            Database::query(
+                "UPDATE payments SET gateway = ? WHERE id = ?",
+                [$gatewayType, $payment['id']]
+            );
+            $payment['gateway'] = $gatewayType;
         }
 
         $transactionId = (string)$payment['transaction_id'];

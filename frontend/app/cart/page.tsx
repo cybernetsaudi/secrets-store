@@ -9,12 +9,15 @@ import { useEffect, useState } from 'react'
 import { convertCurrency } from '@/lib/currency'
 import { motion } from 'framer-motion'
 import TabbyPromo from '@/components/TabbyPromo'
+import { getApiUrl, getImageUrl } from '@/lib/utils'
+import { useProductPlaceholders } from '@/contexts/ProductPlaceholderContext'
 
 export default function CartPage() {
   const router = useRouter()
   const { items, currency, updateQuantity, removeItem, total } = useCart()
   const [displayTotal, setDisplayTotal] = useState(total)
   const [loading, setLoading] = useState(false)
+  const { resolveImage } = useProductPlaceholders()
 
   useEffect(() => {
     const updateTotal = async () => {
@@ -55,7 +58,7 @@ export default function CartPage() {
   useEffect(() => {
     const fetchVisualSettings = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+        const apiUrl = getApiUrl()
         const response = await fetch(`${apiUrl}/settings/visual`)
         if (response.ok) {
           const data = await response.json()
@@ -74,49 +77,20 @@ export default function CartPage() {
     fetchVisualSettings()
   }, [])
 
-  // Use API image if available, otherwise use default
-  const productsBgImage = visualSettings?.products_bg_image_url || defaultHeroBgImage
-  // Build filter CSS string from settings
-  const productsBgFilter = `contrast(${visualSettings?.products_bg_contrast ?? 1}) saturate(${visualSettings?.products_bg_saturation ?? 1}) brightness(${visualSettings?.products_bg_brightness ?? 0.7})`
-
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white antialiased overflow-x-hidden relative" style={{ paddingTop: '3%' }}>
-        {/* Full-screen background image */}
-        <div 
-          className="fixed top-0 left-0 w-full h-screen overflow-hidden"
-          style={{
-            ...(productsBgImage ? {
-              backgroundImage: `url(${productsBgImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              filter: productsBgFilter,
-            } : {}),
-            zIndex: 0,
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 via-[#003366]/30 to-gray-900/60"></div>
-          <div 
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
-        </div>
-
-        <main id="main-content" className="relative pb-20 md:pb-32 px-6" style={{ zIndex: 1 }}>
+      <div className="antialiased selection:bg-gray-200 text-gray-900 bg-white min-h-screen">
+        <main id="main-content" className="px-6 lg:px-12 py-12">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="md:rounded-[40px] md:p-16 lg:p-24 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl text-center max-w-md mx-auto"
+              className="text-center max-w-md mx-auto"
             >
-              <div className="mb-6 inline-block p-4 bg-stone-700/50 rounded-full">
+              <div className="mb-6 inline-block p-4 bg-gray-100 rounded-full">
                 <svg
-                  className="w-16 h-16 text-stone-300"
+                  className="w-16 h-16 text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -130,15 +104,15 @@ export default function CartPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-white mb-4">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
                 Your cart is empty
               </h2>
-              <p className="text-stone-200 mb-8 text-lg">
+              <p className="text-gray-600 mb-8 text-lg">
                 Start shopping to add items to your cart
               </p>
               <Link
                 href="/products/"
-                className="inline-block bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white px-8 py-3 rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-semibold shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06)] hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800"
+                className="inline-block bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white px-8 py-3 rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-semibold shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2"
               >
                 Browse Products
               </Link>
@@ -150,35 +124,14 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white antialiased overflow-x-hidden relative" style={{ paddingTop: '3%' }}>
-      {/* Full-screen background image */}
-      <div 
-        className="fixed top-0 left-0 w-full h-screen overflow-hidden"
-        style={{
-          backgroundImage: `url(${defaultHeroBgImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          filter: 'brightness(0.7)',
-          zIndex: 0,
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 via-[#003366]/30 to-gray-900/60"></div>
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
-      </div>
+    <div className="antialiased selection:bg-gray-200 text-gray-900 bg-white min-h-screen">
 
-      <main id="main-content" className="relative pb-20 md:pb-32 px-6" style={{ zIndex: 1 }}>
+      <main id="main-content" className="px-6 lg:px-12 py-12">
         <div className="max-w-7xl mx-auto">
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-bold text-white mb-8 md:mb-12"
+            className="text-4xl md:text-5xl font-bold text-gray-900 mb-8 md:mb-12"
           >
             Shopping Cart
           </motion.h1>
@@ -187,10 +140,7 @@ export default function CartPage() {
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
               {items.map((item, index) => {
-                const images = item.product.images ?? []
-                const primaryImage =
-                  images.find((img) => img.is_primary) ||
-                  images[0]
+                const { src: imageSrc } = resolveImage(item.product)
 
                 return (
                   <motion.div
@@ -198,28 +148,26 @@ export default function CartPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="md:rounded-[40px] md:p-6 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-6 pr-6 pb-6 pl-6 backdrop-blur-3xl hover:bg-stone-800/60 transition-all duration-300"
+                    className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300"
                   >
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    {primaryImage && (
-                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 bg-stone-700/50 rounded-lg overflow-hidden flex-shrink-0">
-                        <Image
-                          src={primaryImage.image ?? primaryImage.url ?? ''}
-                          alt={primaryImage.alt_text || item.product.name}
-                          fill
-                          className="object-cover"
-                          loading="lazy"
-                          sizes="(max-width: 640px) 96px, 112px"
-                        />
-                      </div>
-                    )}
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                      <Image
+                        src={getImageUrl(imageSrc)}
+                        alt={item.product.name}
+                        fill
+                        className="object-cover"
+                        loading="lazy"
+                        sizes="(max-width: 640px) 96px, 112px"
+                      />
+                    </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-white mb-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">
                         {item.product.name}
                       </h3>
                       {item.variant && (
-                        <p className="text-sm text-stone-200 mb-2">
+                        <p className="text-sm text-gray-600 mb-2">
                           {item.variant.name}
                         </p>
                       )}
@@ -229,7 +177,7 @@ export default function CartPage() {
                     </div>
 
                     <div className="flex items-center space-x-4 w-full sm:w-auto">
-                      <div className="flex items-center space-x-2 bg-stone-700/50 rounded-lg p-1 border border-stone-600/50">
+                      <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-1 border border-gray-300">
                         <button
                           onClick={() =>
                             updateQuantity(
@@ -239,11 +187,11 @@ export default function CartPage() {
                             )
                           }
                           aria-label={`Decrease quantity of ${item.product.name}`}
-                          className="w-9 h-9 flex items-center justify-center border border-stone-600 rounded-md hover:bg-stone-700 hover:border-[#DC143C] hover:text-[#DC143C] transition-all duration-200 font-semibold text-stone-300 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800"
+                          className="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-md hover:bg-gray-100 hover:border-[#DC143C] hover:text-[#DC143C] transition-all duration-200 font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2"
                         >
                           −
                         </button>
-                        <span className="w-10 text-center font-semibold text-white" aria-label={`Quantity: ${item.quantity}`}>
+                        <span className="w-10 text-center font-semibold text-gray-900" aria-label={`Quantity: ${item.quantity}`}>
                           {item.quantity}
                         </span>
                         <button
@@ -255,7 +203,7 @@ export default function CartPage() {
                             )
                           }
                           aria-label={`Increase quantity of ${item.product.name}`}
-                          className="w-9 h-9 flex items-center justify-center border border-stone-600 rounded-md hover:bg-stone-700 hover:border-[#DC143C] hover:text-[#DC143C] transition-all duration-200 font-semibold text-stone-300 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800"
+                          className="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-md hover:bg-gray-100 hover:border-[#DC143C] hover:text-[#DC143C] transition-all duration-200 font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2"
                         >
                           +
                         </button>
@@ -266,7 +214,7 @@ export default function CartPage() {
                           removeItem(item.product.id, item.variant?.id)
                         }
                         aria-label={`Remove ${item.product.name} from cart`}
-                        className="text-[#DC143C] hover:text-[#b01030] font-medium transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-[#DC143C]/20 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800"
+                        className="text-[#DC143C] hover:text-[#b01030] font-medium transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-[#DC143C]/10 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2"
                       >
                         Remove
                       </button>
@@ -283,26 +231,26 @@ export default function CartPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="md:rounded-[40px] md:p-6 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-6 pr-6 pb-6 pl-6 backdrop-blur-3xl sticky top-24"
+                className="bg-white border border-gray-200 rounded-lg p-6 sticky top-24"
               >
-                <h2 className="text-2xl font-bold text-white mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Order Summary
                 </h2>
 
                 <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-stone-200">
+                  <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span className="font-semibold text-white">{formatCurrency(subtotal, currency)}</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(subtotal, currency)}</span>
                   </div>
-                  <div className="flex justify-between text-stone-200">
+                  <div className="flex justify-between text-gray-600">
                     <span>VAT (5%)</span>
-                    <span className="font-semibold text-white">{formatCurrency(vatAmount, currency)}</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(vatAmount, currency)}</span>
                   </div>
-                  <div className="border-t-2 border-stone-700/50 pt-3 mt-3">
-                    <div className="flex justify-between text-xl font-bold text-white">
+                  <div className="border-t-2 border-gray-200 pt-3 mt-3">
+                    <div className="flex justify-between text-xl font-bold text-gray-900">
                       <span>Total</span>
                       {loading ? (
-                        <div className="h-7 w-28 bg-stone-700/50 animate-pulse rounded" />
+                        <div className="h-7 w-28 bg-gray-200 animate-pulse rounded" />
                       ) : (
                         <span className="text-[#DC143C]">{formatCurrency(finalTotal, currency)}</span>
                       )}
@@ -325,7 +273,7 @@ export default function CartPage() {
 
                 <Link
                   href="/checkout/"
-                  className="w-full bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white py-4 px-6 rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-bold text-lg shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06)] hover:shadow-xl hover:scale-105 mb-4 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800 block text-center"
+                  className="w-full bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white py-4 px-6 rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 mb-4 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 block text-center"
                   aria-label="Proceed to checkout"
                 >
                   Proceed to Checkout
@@ -333,7 +281,7 @@ export default function CartPage() {
 
                 <Link
                   href="/products/"
-                  className="block text-center text-stone-200 hover:text-[#DC143C] font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800 rounded px-2"
+                  className="block text-center text-gray-600 hover:text-[#DC143C] font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 rounded px-2"
                 >
                   ← Continue Shopping
                 </Link>

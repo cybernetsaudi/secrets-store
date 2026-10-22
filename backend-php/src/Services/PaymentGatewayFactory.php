@@ -8,6 +8,7 @@ use App\Services\PaymentGateways\BankTransferAdapter;
 use App\Services\PaymentGateways\TabbyAdapter;
 use App\Services\PaymentGateways\TamaraAdapter;
 use App\Services\PaymentGateways\NgeniusAdapter;
+use App\Services\PaymentGateways\SafepayAdapter;
 
 class PaymentGatewayFactory
 {
@@ -18,6 +19,7 @@ class PaymentGatewayFactory
         'tabby' => TabbyAdapter::class,
         'tamara' => TamaraAdapter::class,
         'ngenius' => NgeniusAdapter::class,
+        'safepay' => SafepayAdapter::class,
     ];
     
     public static function getGateway(string $name): ?PaymentGatewayInterface

@@ -7,6 +7,7 @@ import { getProduct, Product } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import StorefrontPageShell from '@/components/StorefrontPageShell'
 
 export default function ProductPage() {
   const params = useParams()
@@ -81,119 +82,35 @@ export default function ProductPage() {
     }
   }, [productId])
 
-  // Visual settings from API
-  const [visualSettings, setVisualSettings] = useState<{
-    products_bg_image_url: string
-    products_bg_contrast?: number
-    products_bg_saturation?: number
-    products_bg_brightness?: number
-  } | null>(null)
-
-  // Default background image
-  const defaultHeroBgImage = '' // Removed hardcoded image - wait for API response
-
-  useEffect(() => {
-    const fetchVisualSettings = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
-        const response = await fetch(`${apiUrl}/settings/visual`)
-        if (response.ok) {
-          const data = await response.json()
-          setVisualSettings({
-            products_bg_image_url: data.products_bg_image_url || '',
-            products_bg_contrast: parseFloat(data.products_bg_contrast) || 1,
-            products_bg_saturation: parseFloat(data.products_bg_saturation) || 1,
-            products_bg_brightness: parseFloat(data.products_bg_brightness) || 0.7,
-          })
-        }
-      } catch {
-        // silent fail – will use default image
-      }
-    }
-    
-    fetchVisualSettings()
-  }, [])
-
-  // Use API image if available, otherwise use default
-  const productsBgImage = visualSettings?.products_bg_image_url || defaultHeroBgImage
-  // Build filter CSS string from settings
-  const productsBgFilter = `contrast(${visualSettings?.products_bg_contrast ?? 1}) saturate(${visualSettings?.products_bg_saturation ?? 1}) brightness(${visualSettings?.products_bg_brightness ?? 0.7})`
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white antialiased overflow-x-hidden relative" style={{ paddingTop: '3%' }}>
-        {/* Full-screen background image */}
-        <div 
-          className="fixed top-0 left-0 w-full h-screen overflow-hidden"
-          style={{
-          ...(productsBgImage ? {
-            backgroundImage: `url(${productsBgImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            filter: productsBgFilter,
-          } : {}),
-          zIndex: 0,
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 via-[#003366]/30 to-gray-900/60"></div>
-          <div 
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
-        </div>
-        <div className="relative flex items-center justify-center min-h-screen" style={{ zIndex: 1 }}>
-          <div className="md:rounded-[40px] md:p-16 lg:p-24 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl text-center">
-            <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-stone-600 border-t-[#DC143C]"></div>
-            <p className="mt-6 text-stone-300 text-lg">Loading product...</p>
+      <StorefrontPageShell>
+        <div className="flex items-center justify-center min-h-[60vh] px-6">
+          <div className="rounded-3xl border border-gray-200 bg-white p-12 shadow-sm text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-[var(--brand-primary)]" />
+            <p className="mt-6 text-gray-600 text-lg">Loading product...</p>
           </div>
         </div>
-      </div>
+      </StorefrontPageShell>
     )
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white antialiased overflow-x-hidden relative" style={{ paddingTop: '3%' }}>
-        {/* Full-screen background image */}
-        <div 
-          className="fixed top-0 left-0 w-full h-screen overflow-hidden"
-          style={{
-          ...(productsBgImage ? {
-            backgroundImage: `url(${productsBgImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            filter: productsBgFilter,
-          } : {}),
-          zIndex: 0,
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 via-[#003366]/30 to-gray-900/60"></div>
-          <div 
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
-        </div>
-        <div className="relative flex items-center justify-center min-h-screen px-6" style={{ zIndex: 1 }}>
+      <StorefrontPageShell>
+        <div className="flex items-center justify-center min-h-[60vh] px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="md:rounded-[40px] md:p-16 lg:p-24 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl text-center max-w-2xl"
+            className="rounded-3xl border border-gray-200 bg-white p-12 shadow-sm text-center max-w-2xl"
           >
-            <h1 className="text-3xl font-bold text-white mb-4">Product Not Found</h1>
-            <Link href="/products/" className="text-[#DC143C] hover:text-[#b01030] font-semibold text-lg transition-colors">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Product Not Found</h1>
+            <Link href="/products/" className="text-[var(--brand-primary)] hover:opacity-80 font-semibold text-lg transition-colors">
               Return to Store
             </Link>
           </motion.div>
         </div>
-      </div>
+      </StorefrontPageShell>
     )
   }
 

@@ -21,7 +21,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
-  const [currency, setCurrencyState] = useState<Currency>('AED')
+  const [currency, setCurrencyState] = useState<Currency>('PKR')
 
   useEffect(() => {
     const loadCart = async () => {

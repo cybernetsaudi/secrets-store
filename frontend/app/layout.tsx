@@ -3,14 +3,17 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import { CartProvider } from '@/contexts/CartContext'
+import AppThemeProvider from '@/components/AppThemeProvider'
+import CollectionAmbience from '@/components/CollectionAmbience'
 import Header from '@/components/Header'
 import ConditionalHeader from '@/components/ConditionalHeader'
+import ConditionalFooter from '@/components/ConditionalFooter'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Gulf United FC - Academy Store',
-  description: 'Official store for Gulf United FC training courses and academy programs',
+  title: 'GATVIA — Fashion Store',
+  description: 'Classic, Premium, Designer & Limited Edition garments for men, women, and children',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -38,9 +41,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <CartProvider>
-          <ConditionalHeader />
-          {children}
-          <Toaster position="top-right" />
+          <AppThemeProvider>
+            <CollectionAmbience />
+            <ConditionalHeader />
+            {children}
+            <ConditionalFooter />
+            <Toaster position="top-right" />
+          </AppThemeProvider>
         </CartProvider>
       </body>
     </html>

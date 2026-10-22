@@ -15,6 +15,7 @@ import {
 } from '@stripe/react-stripe-js'
 import { motion } from 'framer-motion'
 import TabbyCard from '@/components/TabbyCard'
+import StorefrontPageShell from '@/components/StorefrontPageShell'
 
 // Lazy load Stripe only when needed
 let stripePromise: Promise<Stripe | null> | null = null
@@ -45,13 +46,9 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { items, currency, clearCart, total, removeItem } = useCart()
   const [step, setStep] = useState<'form' | 'payment'>('form')
-  const [paymentMethod, setPaymentMethod] = useState<string>('stripe')
+  const [paymentMethod, setPaymentMethod] = useState<string>('safepay')
   const [availableMethods, setAvailableMethods] = useState<string[]>([
-    'stripe',
-    'apple_pay',
-    'ngenius',
-    'tabby',
-    'tamara',
+    'safepay',
     'bank_transfer',
   ])
   const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -68,9 +65,12 @@ export default function CheckoutPage() {
     guest_name: '',
     guest_email: '',
     guest_phone: '',
-    player_name: '',
-    player_date_of_birth: '',
-    trial_coach_name: '',
+    shipping_address_line1: '',
+    shipping_address_line2: '',
+    shipping_city: '',
+    shipping_state: '',
+    shipping_postal_code: '',
+    shipping_country: 'PK',
     no_refund_accepted: false,
   })
 
@@ -128,9 +128,8 @@ export default function CheckoutPage() {
               guest_email: formData.guest_email,
               guest_name: formData.guest_name,
               guest_phone: formData.guest_phone,
-              player_name: formData.player_name,
-              player_date_of_birth: formData.player_date_of_birth,
-              trial_coach_name: formData.trial_coach_name || null,
+              shipping_city: formData.shipping_city,
+              shipping_country: formData.shipping_country,
               cart_data: items,
               subtotal: total,
               currency: currency,
@@ -171,7 +170,7 @@ export default function CheckoutPage() {
         }
         const data = await response.json()
         const rows = Array.isArray(data.results) ? data.results : Array.isArray(data) ? data : []
-        const allowed = ['stripe', 'apple_pay', 'ngenius', 'tabby', 'tamara', 'bank_transfer']
+        const allowed = ['stripe', 'apple_pay', 'ngenius', 'tabby', 'tamara', 'bank_transfer', 'safepay']
         const types: string[] = []
         for (const g of rows) {
           const t = (g.gateway_type || '').toLowerCase()
@@ -306,22 +305,20 @@ export default function CheckoutPage() {
       newErrors.guest_phone = 'Phone number is required'
     }
 
-    if (!formData.player_name.trim()) {
-      newErrors.player_name = 'Player name is required'
+    if (!formData.shipping_address_line1.trim()) {
+      newErrors.shipping_address_line1 = 'Shipping address is required'
     }
 
-    if (!formData.player_date_of_birth.trim()) {
-      newErrors.player_date_of_birth = 'Player date of birth is required'
-    } else {
-      // Validate date format (YYYY-MM-DD)
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-      if (!dateRegex.test(formData.player_date_of_birth)) {
-        newErrors.player_date_of_birth = 'Please enter a valid date (YYYY-MM-DD)'
-      }
+    if (!formData.shipping_city.trim()) {
+      newErrors.shipping_city = 'City is required'
+    }
+
+    if (!formData.shipping_country.trim()) {
+      newErrors.shipping_country = 'Country is required'
     }
 
     if (!formData.no_refund_accepted) {
-      newErrors.no_refund_accepted = 'You must accept the no refund policy'
+      newErrors.no_refund_accepted = 'You must agree to the terms and conditions'
     }
 
     setErrors(newErrors)
@@ -502,9 +499,12 @@ export default function CheckoutPage() {
         guest_name: formData.guest_name,
         guest_email: formData.guest_email,
         guest_phone: formData.guest_phone,
-        player_name: formData.player_name,
-        player_date_of_birth: formData.player_date_of_birth,
-        trial_coach_name: formData.trial_coach_name || undefined,
+        shipping_address_line1: formData.shipping_address_line1,
+        shipping_address_line2: formData.shipping_address_line2 || undefined,
+        shipping_city: formData.shipping_city,
+        shipping_state: formData.shipping_state || undefined,
+        shipping_postal_code: formData.shipping_postal_code || undefined,
+        shipping_country: formData.shipping_country,
         items: items.map((item) => ({
           product_id: item.product.id,
           variant_id: item.variant?.id,
@@ -527,8 +527,9 @@ export default function CheckoutPage() {
       }
 
       // If Tabby/Tamara payment was initiated but no checkout_url, show error
-      if (paymentMethod === 'tabby' || paymentMethod === 'tamara') {
-        const gatewayName = paymentMethod === 'tabby' ? 'Tabby' : 'Tamara'
+      if (paymentMethod === 'tabby' || paymentMethod === 'tamara' || paymentMethod === 'safepay') {
+        const gatewayName =
+          paymentMethod === 'tabby' ? 'Tabby' : paymentMethod === 'tamara' ? 'Tamara' : 'Safepay'
         toast.error(`${gatewayName} payment was initiated but checkout URL is missing. Please contact support with order number: ` + (order.order_number || 'N/A'))
         setLoading(false)
         return
@@ -638,47 +639,22 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white antialiased overflow-x-hidden relative" style={{ paddingTop: '3%' }}>
-      {/* Full-screen background image */}
-      <div 
-        className="fixed top-0 left-0 w-full h-screen overflow-hidden"
-        style={{
-          ...(productsBgImage ? {
-            backgroundImage: `url(${productsBgImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            filter: productsBgFilter,
-          } : {}),
-          zIndex: 0,
-        }}
-        aria-hidden="true"
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 via-[#003366]/30 to-gray-900/60"></div>
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
-      </div>
-
-      <main id="main-content" className="relative pb-20 md:pb-32 px-6" style={{ zIndex: 1 }}>
+    <StorefrontPageShell>
+      <main id="main-content" className="px-6 lg:px-12 py-12 md:py-16">
         <div className="max-w-7xl mx-auto">
           {/* Progress Indicator */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="md:rounded-[40px] md:p-6 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-6 pr-6 pb-6 pl-6 backdrop-blur-3xl mb-8"
+            className="md:rounded-[40px] md:p-6 overflow-hidden bg-white border border-gray-200 shadow-sm mb-8"
           >
             <div className="flex items-center justify-center space-x-4 md:space-x-8">
               {/* Step 1 */}
               <div className="flex items-center">
                 <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
                   step === 'form' 
-                    ? 'bg-[#DC143C] border-[#DC143C] text-white' 
-                    : 'bg-stone-700/50 border-stone-600 text-stone-300'
+                    ? 'bg-[var(--brand-primary)] border-[var(--brand-primary)] text-white' 
+                    : 'bg-gray-100 border-gray-300 text-gray-600'
                 }`}>
                   {step === 'payment' ? (
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -689,7 +665,7 @@ export default function CheckoutPage() {
                   )}
                 </div>
                 <span className={`ml-3 text-sm font-medium hidden md:block ${
-                  step === 'form' ? 'text-white' : 'text-stone-300'
+                  step === 'form' ? 'text-gray-900' : 'text-gray-600'
                 }`}>
                   Information
                 </span>
@@ -697,20 +673,20 @@ export default function CheckoutPage() {
 
               {/* Connector */}
               <div className={`h-1 w-16 md:w-24 rounded-full transition-all duration-300 ${
-                step === 'payment' ? 'bg-[#DC143C]' : 'bg-stone-700/50'
+                step === 'payment' ? 'bg-[var(--brand-primary)]' : 'bg-gray-100'
               }`} />
 
               {/* Step 2 */}
               <div className="flex items-center">
                 <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
                   step === 'payment' 
-                    ? 'bg-[#DC143C] border-[#DC143C] text-white' 
-                    : 'bg-stone-700/50 border-stone-600 text-stone-300'
+                    ? 'bg-[var(--brand-primary)] border-[var(--brand-primary)] text-white' 
+                    : 'bg-gray-100 border-gray-300 text-gray-600'
                 }`}>
                   <span className="font-bold">2</span>
                 </div>
                 <span className={`ml-3 text-sm font-medium hidden md:block ${
-                  step === 'payment' ? 'text-white' : 'text-stone-300'
+                  step === 'payment' ? 'text-gray-900' : 'text-gray-600'
                 }`}>
                   Payment
                 </span>
@@ -722,7 +698,7 @@ export default function CheckoutPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-8 md:mb-12 text-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-8 md:mb-12 text-center">
               Checkout
             </h1>
           </motion.div>
@@ -733,12 +709,12 @@ export default function CheckoutPage() {
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="md:rounded-[40px] md:p-8 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl space-y-6"
+                className="rounded-3xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm space-y-6"
               >
-                <h2 className="text-2xl font-bold text-white mb-6">Guest Information</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Guest Information</h2>
 
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Full Name *
                   </label>
                   <input
@@ -749,20 +725,20 @@ export default function CheckoutPage() {
                     }
                     aria-label="Full name"
                     aria-required="true"
-                    className={`w-full px-4 py-3 bg-stone-700/50 border rounded-lg text-white placeholder-stone-400 transition-all duration-200 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] ${
+                    className={`w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 transition-all duration-200 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent ${
                       errors.guest_name
-                        ? 'border-[#DC143C] bg-[#DC143C]/10'
-                        : 'border-stone-600'
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
+                        : 'border-gray-300'
                     }`}
                     placeholder="Enter your full name"
                   />
                   {errors.guest_name && (
-                    <p className="text-[#DC143C] text-sm mt-1 font-medium" role="alert">{errors.guest_name}</p>
+                    <p className="text-red-600 text-sm mt-1 font-medium" role="alert">{errors.guest_name}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Email *
                   </label>
                   <input
@@ -773,20 +749,20 @@ export default function CheckoutPage() {
                     }
                     aria-label="Email address"
                     aria-required="true"
-                    className={`w-full px-4 py-3 bg-stone-700/50 border rounded-lg text-white placeholder-stone-400 transition-all duration-200 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] ${
+                    className={`w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 transition-all duration-200 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent ${
                       errors.guest_email
-                        ? 'border-[#DC143C] bg-[#DC143C]/10'
-                        : 'border-stone-600'
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
+                        : 'border-gray-300'
                     }`}
                     placeholder="your.email@example.com"
                   />
                   {errors.guest_email && (
-                    <p className="text-[#DC143C] text-sm mt-1 font-medium" role="alert">{errors.guest_email}</p>
+                    <p className="text-red-600 text-sm mt-1 font-medium" role="alert">{errors.guest_email}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Phone Number *
                   </label>
                   <input
@@ -797,85 +773,154 @@ export default function CheckoutPage() {
                     }
                     aria-label="Phone number"
                     aria-required="true"
-                    className={`w-full px-4 py-3 bg-stone-700/50 border rounded-lg text-white placeholder-stone-400 transition-all duration-200 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] ${
+                    className={`w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 transition-all duration-200 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent ${
                       errors.guest_phone
-                        ? 'border-[#DC143C] bg-[#DC143C]/10'
-                        : 'border-stone-600'
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
+                        : 'border-gray-300'
                     }`}
-                    placeholder="+971 XX XXX XXXX"
+                    placeholder="+92 3XX XXXXXXX"
                   />
                   {errors.guest_phone && (
-                    <p className="text-[#DC143C] text-sm mt-1 font-medium" role="alert">{errors.guest_phone}</p>
+                    <p className="text-red-600 text-sm mt-1 font-medium" role="alert">{errors.guest_phone}</p>
                   )}
                 </div>
 
+                <h3 className="text-xl font-bold text-gray-900 pt-2">Shipping Address</h3>
+
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
-                    Player Name *
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Address Line 1 *
                   </label>
                   <input
                     type="text"
-                    value={formData.player_name}
+                    value={formData.shipping_address_line1}
                     onChange={(e) =>
-                      setFormData({ ...formData, player_name: e.target.value })
+                      setFormData({ ...formData, shipping_address_line1: e.target.value })
                     }
-                    aria-label="Player name"
+                    aria-label="Shipping address line 1"
                     aria-required="true"
-                    className={`w-full px-4 py-3 bg-stone-700/50 border rounded-lg text-white placeholder-stone-400 transition-all duration-200 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] ${
-                      errors.player_name
-                        ? 'border-[#DC143C] bg-[#DC143C]/10'
-                        : 'border-stone-600'
+                    className={`w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 transition-all duration-200 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent ${
+                      errors.shipping_address_line1
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
+                        : 'border-gray-300'
                     }`}
-                    placeholder="Enter player's full name"
+                    placeholder="House / building, street"
                   />
-                  {errors.player_name && (
-                    <p className="text-[#DC143C] text-sm mt-1 font-medium" role="alert">{errors.player_name}</p>
+                  {errors.shipping_address_line1 && (
+                    <p className="text-red-600 text-sm mt-1 font-medium" role="alert">{errors.shipping_address_line1}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
-                    Player Date of Birth *
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.player_date_of_birth}
-                    onChange={(e) =>
-                      setFormData({ ...formData, player_date_of_birth: e.target.value })
-                    }
-                    aria-label="Player date of birth"
-                    aria-required="true"
-                    max={new Date().toISOString().split('T')[0]}
-                    className={`w-full px-4 py-3 bg-stone-700/50 border rounded-lg text-white placeholder-stone-400 transition-all duration-200 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] ${
-                      errors.player_date_of_birth
-                        ? 'border-[#DC143C] bg-[#DC143C]/10'
-                        : 'border-stone-600'
-                    }`}
-                  />
-                  {errors.player_date_of_birth && (
-                    <p className="text-[#DC143C] text-sm mt-1 font-medium" role="alert">{errors.player_date_of_birth}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
-                    Trial Coach Name (Optional)
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Address Line 2 (Optional)
                   </label>
                   <input
                     type="text"
-                    value={formData.trial_coach_name}
+                    value={formData.shipping_address_line2}
                     onChange={(e) =>
-                      setFormData({ ...formData, trial_coach_name: e.target.value })
+                      setFormData({ ...formData, shipping_address_line2: e.target.value })
                     }
-                    aria-label="Trial coach name"
-                    className="w-full px-4 py-3 bg-stone-700/50 border border-stone-600 rounded-lg text-white placeholder-stone-400 transition-all duration-200 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C]"
-                    placeholder="Enter coach name if applicable"
+                    aria-label="Shipping address line 2"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 transition-all duration-200 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent"
+                    placeholder="Apartment, suite, area (optional)"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.shipping_city}
+                      onChange={(e) =>
+                        setFormData({ ...formData, shipping_city: e.target.value })
+                      }
+                      aria-label="Shipping city"
+                      aria-required="true"
+                      className={`w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 transition-all duration-200 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent ${
+                        errors.shipping_city
+                          ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
+                          : 'border-gray-300'
+                      }`}
+                      placeholder="City"
+                    />
+                    {errors.shipping_city && (
+                      <p className="text-red-600 text-sm mt-1 font-medium" role="alert">{errors.shipping_city}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Province / State
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.shipping_state}
+                      onChange={(e) =>
+                        setFormData({ ...formData, shipping_state: e.target.value })
+                      }
+                      aria-label="Shipping province or state"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 transition-all duration-200 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent"
+                      placeholder="Province or state"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.shipping_postal_code}
+                      onChange={(e) =>
+                        setFormData({ ...formData, shipping_postal_code: e.target.value })
+                      }
+                      aria-label="Shipping postal code"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 transition-all duration-200 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent"
+                      placeholder="Postal code"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Country *
+                    </label>
+                    <select
+                      value={formData.shipping_country}
+                      onChange={(e) =>
+                        setFormData({ ...formData, shipping_country: e.target.value })
+                      }
+                      aria-label="Shipping country"
+                      aria-required="true"
+                      className={`w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-transparent ${
+                        errors.shipping_country
+                          ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="PK">Pakistan</option>
+                      <option value="AE">United Arab Emirates</option>
+                      <option value="GB">United Kingdom</option>
+                      <option value="US">United States</option>
+                      <option value="SA">Saudi Arabia</option>
+                      <option value="IN">India</option>
+                      <option value="CA">Canada</option>
+                      <option value="AU">Australia</option>
+                    </select>
+                    {errors.shipping_country && (
+                      <p className="text-red-600 text-sm mt-1 font-medium" role="alert">{errors.shipping_country}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Discount Code */}
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Discount Code (Optional)
                   </label>
                   <div className="flex space-x-2">
@@ -884,7 +929,7 @@ export default function CheckoutPage() {
                       value={discountCode}
                       onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                       aria-label="Discount code"
-                      className="flex-1 px-4 py-3 bg-stone-700/50 border border-stone-600 rounded-lg text-white placeholder-stone-400 focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C] transition-all duration-200"
+                      className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-[var(--brand-focus)] transition-all duration-200"
                       placeholder="Enter discount code"
                     />
                     <button
@@ -892,7 +937,7 @@ export default function CheckoutPage() {
                       onClick={handleDiscountCode}
                       disabled={discountLoading || !discountCode.trim()}
                       aria-label="Apply discount code"
-                      className="px-6 py-3 bg-stone-700/50 text-white rounded-lg hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold border border-stone-600 hover:border-[#DC143C] focus:outline-none focus:ring-2 focus:ring-[#DC143C]"
+                      className="px-6 py-3 bg-white text-gray-900 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold border border-gray-300 hover:border-[var(--brand-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-focus)]"
                     >
                       {discountLoading ? 'Applying...' : 'Apply'}
                     </button>
@@ -904,17 +949,17 @@ export default function CheckoutPage() {
 
                 {/* Payment Method */}
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-3">
+                  <label className="block text-sm font-semibold text-gray-900 mb-3">
                     Payment Method *
                   </label>
                   <div className="space-y-3">
                     {availableMethods.map((method) => (
                       <label
                         key={method}
-                        className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 focus-within:ring-2 focus-within:ring-[#DC143C] ${
+                        className={`flex items-center space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--brand-focus)] ${
                           paymentMethod === method
-                            ? 'border-[#DC143C] bg-[#DC143C]/20'
-                            : 'border-stone-600 hover:border-stone-500 hover:bg-stone-700/30'
+                            ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/10'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                         }`}
                       >
                         <input
@@ -924,7 +969,7 @@ export default function CheckoutPage() {
                           checked={paymentMethod === method}
                           onChange={(e) => setPaymentMethod(e.target.value)}
                           aria-label={`Select ${method} payment method`}
-                          className="text-[#DC143C] w-5 h-5 focus:ring-2 focus:ring-[#DC143C] cursor-pointer"
+                          className="text-red-600 w-5 h-5 focus:ring-2 focus:ring-[var(--brand-focus)] cursor-pointer"
                         />
                         {/* Payment Method Icons */}
                         <div className="flex items-center gap-3 flex-1">
@@ -957,7 +1002,7 @@ export default function CheckoutPage() {
                           )}
                           {method === 'apple_pay' && (
                             <div className="w-14 h-7 bg-black rounded flex items-center justify-center px-2 shadow-sm">
-                              <svg viewBox="0 0 24 24" className="w-5 h-5 text-white">
+                              <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-900">
                                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="currentColor"/>
                               </svg>
                             </div>
@@ -985,14 +1030,21 @@ export default function CheckoutPage() {
                               </svg>
                             </div>
                           )}
+                          {method === 'safepay' && (
+                            <div className="w-14 h-7 bg-gradient-to-r from-[#1B4DFF] to-[#0D2F99] rounded flex items-center justify-center px-2 shadow-sm">
+                              <svg viewBox="0 0 60 20" className="w-full h-4">
+                                <text x="30" y="14" fontSize="8" fill="white" textAnchor="middle" fontWeight="700" fontFamily="Arial, sans-serif">SAFEPAY</text>
+                              </svg>
+                            </div>
+                          )}
                           {method === 'bank_transfer' && (
                             <div className="w-10 h-7 flex items-center justify-center">
-                              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                               </svg>
                             </div>
                           )}
-                          <span className="font-semibold text-white capitalize">
+                          <span className="font-semibold text-gray-900 capitalize">
                             {method === 'stripe'
                               ? 'Credit/Debit Card'
                               : method === 'apple_pay'
@@ -1003,6 +1055,8 @@ export default function CheckoutPage() {
                               ? 'Tabby (Installments)'
                               : method === 'tamara'
                               ? 'Tamara (Installments)'
+                              : method === 'safepay'
+                              ? 'Card (Safepay)'
                               : 'Bank Transfer'}
                           </span>
                         </div>
@@ -1014,23 +1068,23 @@ export default function CheckoutPage() {
                 {/* Bank Transfer - Only show selection if multiple accounts, no details until success page */}
                 {paymentMethod === 'bank_transfer' && bankDetails && bankDetails.bank_accounts && bankDetails.bank_accounts.length > 1 && (
                   <div className="bg-[#003366]/20 border border-[#003366]/30 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
                       Select Bank Account
                     </h3>
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-white mb-2">
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
                         Bank Account *
                       </label>
                       <select
                         value={selectedBankAccountId || ''}
                         onChange={(e) => setSelectedBankAccountId(parseInt(e.target.value) || null)}
                         aria-label="Select bank account"
-                        className="w-full px-4 py-2 bg-stone-700/50 border border-stone-600 rounded-md text-white focus:ring-2 focus:ring-[#DC143C] focus:border-[#DC143C]"
+                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-[var(--brand-focus)] focus:border-[var(--brand-focus)]"
                         required
                       >
                         <option value="">-- Select Bank Account --</option>
                         {bankDetails.bank_accounts.map((account: any) => (
-                          <option key={account.id} value={account.id} className="bg-stone-800">
+                          <option key={account.id} value={account.id} className="bg-white">
                             {account.bank_name} - {account.account_name} ({account.account_number})
                           </option>
                         ))}
@@ -1046,14 +1100,14 @@ export default function CheckoutPage() {
                 
                 {/* Show error if no bank accounts available */}
                 {paymentMethod === 'bank_transfer' && bankDetails && (!bankDetails.bank_accounts || bankDetails.bank_accounts.length === 0) && (
-                  <div className="bg-[#DC143C]/20 border border-[#DC143C]/30 rounded p-4">
-                    <p className="text-[#DC143C] text-sm">
+                  <div className="bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)]/30 rounded p-4">
+                    <p className="text-red-600 text-sm">
                       <strong>Error:</strong> No bank accounts are currently configured. Please contact support or try a different payment method.
                     </p>
                   </div>
                 )}
 
-                {/* No Refund Policy */}
+                {/* Terms agreement */}
                 <div>
                   <label className="flex items-start space-x-2">
                     <input
@@ -1065,25 +1119,16 @@ export default function CheckoutPage() {
                           no_refund_accepted: e.target.checked,
                         })
                       }
-                      aria-label="Accept terms and conditions"
+                      aria-label="Agree to terms and conditions"
                       aria-required="true"
-                      className="mt-1 text-[#DC143C] w-5 h-5 focus:ring-2 focus:ring-[#DC143C] cursor-pointer"
+                      className="mt-1 text-red-600 w-5 h-5 focus:ring-2 focus:ring-[var(--brand-focus)] cursor-pointer"
                     />
-                    <span className="text-sm text-stone-200">
-                      I agree and accept the following terms and conditions. Please visit{' '}
-                      <a 
-                        href="https://www.gulfunitedfc.com/academytsandcs" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-[#DC143C] hover:text-[#b01030] underline"
-                      >
-                        https://www.gulfunitedfc.com/academytsandcs
-                      </a>
-                      {' '}for full details. *
+                    <span className="text-sm text-gray-700">
+                      I agree to the terms and conditions. *
                     </span>
                   </label>
                   {errors.no_refund_accepted && (
-                    <p className="text-[#DC143C] text-sm mt-1" role="alert">
+                    <p className="text-red-600 text-sm mt-1" role="alert">
                       {errors.no_refund_accepted}
                     </p>
                   )}
@@ -1096,29 +1141,29 @@ export default function CheckoutPage() {
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="md:rounded-[40px] md:p-6 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-6 pr-6 pb-6 pl-6 backdrop-blur-3xl sticky top-24"
+                className="md:rounded-[40px] md:p-6 overflow-hidden bg-white border border-gray-200 shadow-sm sticky top-24"
               >
-                <h2 className="text-2xl font-bold text-white mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Order Summary
                 </h2>
 
                 {/* Cart Items */}
-                <div className="mb-6 border-b border-stone-600/50 pb-6">
-                  <h3 className="text-sm font-semibold text-stone-300 mb-3 uppercase tracking-wide">
+                <div className="mb-6 border-b border-gray-300/50 pb-6">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">
                     Items ({items.length})
                   </h3>
                   <div className="space-y-3 max-h-48 overflow-y-auto">
                     {items.map((item) => (
                       <div key={`${item.product.id}-${item.variant?.id || 'no-variant'}`} className="flex justify-between items-start text-sm">
                         <div className="flex-1 pr-2">
-                          <p className="text-white font-medium">{item.product.name}</p>
+                          <p className="text-gray-900 font-medium">{item.product.name}</p>
                           {item.variant && (
-                            <p className="text-stone-400 text-xs mt-1">{item.variant.name}</p>
+                            <p className="text-gray-500 text-xs mt-1">{item.variant.name}</p>
                           )}
-                          <p className="text-stone-400 text-xs mt-1">Qty: {item.quantity}</p>
+                          <p className="text-gray-500 text-xs mt-1">Qty: {item.quantity}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-white font-medium">
+                          <p className="text-gray-900 font-medium">
                             {formatCurrency(item.totalPrice, currency)}
                           </p>
                         </div>
@@ -1128,15 +1173,15 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Price Breakdown */}
-                <div className="mb-6 space-y-3 border-b border-stone-600/50 pb-6">
+                <div className="mb-6 space-y-3 border-b border-gray-300/50 pb-6">
                   <div className="flex justify-between text-sm">
-                    <span className="text-stone-300">Subtotal</span>
-                    <span className="text-white font-medium">{formatCurrency(subtotal, currency)}</span>
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="text-gray-900 font-medium">{formatCurrency(subtotal, currency)}</span>
                   </div>
                   
                   {discountAmount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-stone-300">
+                      <span className="text-gray-600">
                         Discount {discountCode && <span className="text-green-400">({discountCode})</span>}
                       </span>
                       <span className="text-green-400 font-medium">
@@ -1146,22 +1191,22 @@ export default function CheckoutPage() {
                   )}
 
                   <div className="flex justify-between text-sm">
-                    <span className="text-stone-300">VAT (5%)</span>
-                    <span className="text-white font-medium">{formatCurrency(vatAmount, currency)}</span>
+                    <span className="text-gray-600">VAT (5%)</span>
+                    <span className="text-gray-900 font-medium">{formatCurrency(vatAmount, currency)}</span>
                   </div>
 
-                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-stone-600/50">
-                    <span className="text-white">Total</span>
-                    <span className="text-[#DC143C]">{formatCurrency(finalTotal, currency)}</span>
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300/50">
+                    <span className="text-gray-900">Total</span>
+                    <span className="text-red-600">{formatCurrency(finalTotal, currency)}</span>
                   </div>
                 </div>
 
                 {/* Payment Method */}
                 <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-stone-300 mb-2 uppercase tracking-wide">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">
                     Payment Method
                   </h3>
-                  <div className="flex items-center space-x-2 text-sm text-stone-200">
+                  <div className="flex items-center space-x-2 text-sm text-gray-700">
                     {paymentMethod === 'stripe' && (
                       <>
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -1202,6 +1247,12 @@ export default function CheckoutPage() {
                         <span>Buy Now, Pay Later</span>
                       </>
                     )}
+                    {paymentMethod === 'safepay' && (
+                      <>
+                        <span className="text-lg font-bold">Safepay</span>
+                        <span>Card Payment</span>
+                      </>
+                    )}
                     {paymentMethod === 'bank_transfer' && (
                       <>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1226,8 +1277,15 @@ export default function CheckoutPage() {
                   {/* Tamara - Display when Tamara payment method is selected */}
                   {paymentMethod === 'tamara' && (
                     <div className="mt-4 p-4 bg-[#00B2A9]/10 border border-[#00B2A9]/30 rounded-lg">
-                      <p className="text-stone-200 text-sm">
+                      <p className="text-gray-700 text-sm">
                         Pay in 4 interest-free installments with Tamara. You will be redirected to Tamara to complete your payment.
+                      </p>
+                    </div>
+                  )}
+                  {paymentMethod === 'safepay' && (
+                    <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                      <p className="text-gray-700 text-sm">
+                        Pay securely with card via Safepay. You will be redirected to complete your payment.
                       </p>
                     </div>
                   )}
@@ -1235,19 +1293,19 @@ export default function CheckoutPage() {
 
                 {/* Trust Indicators */}
                 <div className="mb-6 space-y-3">
-                  <div className="flex items-center space-x-2 text-sm text-stone-200">
+                  <div className="flex items-center space-x-2 text-sm text-gray-700">
                     <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     <span>Secure Payment</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm text-stone-200">
+                  <div className="flex items-center space-x-2 text-sm text-gray-700">
                     <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     <span>SSL Encrypted</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm text-stone-200">
+                  <div className="flex items-center space-x-2 text-sm text-gray-700">
                     <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -1259,7 +1317,7 @@ export default function CheckoutPage() {
                   type="submit"
                   disabled={loading}
                   aria-label={loading ? 'Processing order...' : step === 'form' ? 'Continue to payment' : 'Complete order'}
-                  className="w-full bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white py-4 px-6 rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-bold text-lg shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06)] hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800"
+                  className="w-full bg-[var(--brand-btn-primary-bg)] text-[var(--brand-btn-primary-text)] py-4 px-6 rounded-full hover:opacity-90 transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Processing...' : step === 'form' ? 'Continue to Payment' : 'Complete Order'}
                 </button>
@@ -1268,7 +1326,7 @@ export default function CheckoutPage() {
           </form>
         </div>
       </main>
-    </div>
+    </StorefrontPageShell>
   )
 }
 
@@ -1396,48 +1454,23 @@ function StripeCheckout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white antialiased overflow-x-hidden relative" style={{ paddingTop: '3%' }}>
-      {/* Full-screen background image */}
-      <div 
-        className="fixed top-0 left-0 w-full h-screen overflow-hidden"
-        style={{
-          ...(productsBgImage ? {
-            backgroundImage: `url(${productsBgImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            filter: productsBgFilter,
-          } : {}),
-          zIndex: 0,
-        }}
-        aria-hidden="true"
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 via-[#003366]/30 to-gray-900/60"></div>
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
-      </div>
-
-      <main id="main-content" className="relative pb-20 md:pb-32 px-6" style={{ zIndex: 1 }}>
+    <StorefrontPageShell>
+      <main id="main-content" className="px-6 lg:px-12 py-12 md:py-16">
         <div className="max-w-2xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="md:rounded-[40px] md:p-8 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl"
+            className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm"
           >
             <button
               onClick={onBack}
               aria-label="Back to checkout form"
-              className="text-stone-200 hover:text-[#DC143C] mb-6 font-medium transition-colors duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800 rounded px-2"
+              className="text-gray-600 hover:text-[var(--brand-primary)] mb-6 font-medium transition-colors duration-200 flex items-center gap-2"
             >
               <span>←</span> Back to form
             </button>
 
-            <h2 className="text-3xl font-bold text-white mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">
               Payment Details
             </h2>
 
@@ -1450,7 +1483,7 @@ function StripeCheckout({
                 disabled={!stripe || loading}
                 aria-label={loading ? 'Processing payment...' : 'Pay now'}
                 aria-busy={loading}
-                className="w-full bg-gradient-to-r from-[#DC143C] to-[#b01030] text-white py-4 px-6 rounded-lg hover:from-[#b01030] hover:to-[#DC143C] transition-all duration-300 font-bold text-lg shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06)] hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800"
+                className="w-full bg-[var(--brand-btn-primary-bg)] text-[var(--brand-btn-primary-text)] py-4 px-6 rounded-full hover:opacity-90 transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Processing...' : 'Pay Now'}
               </button>
@@ -1458,7 +1491,7 @@ function StripeCheckout({
           </motion.div>
         </div>
       </main>
-    </div>
+    </StorefrontPageShell>
   )
 }
 

@@ -218,7 +218,7 @@ export default function AdminDiscountsPage() {
                 <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-white">
                   {discount.discount_type === 'percentage'
                     ? `${discount.discount_value}%`
-                    : `${discount.discount_value} ${discount.discount_type === 'fixed' ? 'AED' : ''}`}
+                    : `${discount.discount_value} ${discount.discount_type === 'fixed' ? 'PKR' : ''}`}
                 </td>
                 <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-stone-300">
                   {discount.used_count} / {discount.usage_limit ?? '∞'}
@@ -267,7 +267,7 @@ export default function AdminDiscountsPage() {
                 <div className="text-sm font-medium text-white">
                   {discount.discount_type === 'percentage'
                     ? `${discount.discount_value}%`
-                    : `${discount.discount_value} ${discount.discount_type === 'fixed' ? 'AED' : ''}`}
+                    : `${discount.discount_value} ${discount.discount_type === 'fixed' ? 'PKR' : ''}`}
                 </div>
               </div>
             </div>

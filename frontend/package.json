@@ -14,7 +14,8 @@
     "export": "next build",
     "start": "next start",
     "lint": "next lint",
-    "generate-favicon": "node scripts/generate-favicon.js"
+    "generate-favicon": "node scripts/generate-favicon.js",
+    "optimize-branding": "node scripts/optimize-branding.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

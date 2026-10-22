@@ -12,6 +12,11 @@ use App\Services\EncryptionService;
  */
 class EmailService
 {
+    private static function brandName(): string
+    {
+        return Setting::get('email_from_name', 'GATVIA Secrets');
+    }
+
     /**
      * Send order confirmation email to customer
      */
@@ -76,7 +81,7 @@ class EmailService
         }
         
         $contactLine = $contactEmail
-            ? "<p style='margin: 8px 0; color: #d6d3d1;'>If you have any questions, please contact us at <a href='mailto:{$contactEmail}' style='color: #DC143C; text-decoration: none;'>{$contactEmail}</a></p>"
+            ? "<p style='margin: 8px 0; color: #d6d3d1;'>If you have any questions, please contact us at <a href='mailto:{$contactEmail}' style='color: #111827; text-decoration: none; font-weight: 600;'>{$contactEmail}</a></p>"
             : "<p style='margin: 8px 0; color: #d6d3d1;'>If you have any questions, please contact us.</p>";
 
         $orderDate = date('F j, Y g:i A', strtotime($order['created_at']));
@@ -111,7 +116,7 @@ class EmailService
                     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
                 }
                 .header { 
-                    background: linear-gradient(135deg, rgba(220, 20, 60, 0.9) 0%, rgba(0, 51, 102, 0.9) 100%);
+                    background: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(55, 65, 81, 0.9) 100%);
                     padding: 32px 24px;
                     text-align: center;
                 }
@@ -185,7 +190,7 @@ class EmailService
                     border-top: 1px solid rgba(120, 113, 108, 0.2);
                 }
                 .summary-row.total {
-                    border-top: 2px solid rgba(220, 20, 60, 0.5);
+                    border-top: 2px solid rgba(17, 24, 39, 0.2);
                     margin-top: 16px;
                     padding-top: 16px;
                 }
@@ -196,7 +201,7 @@ class EmailService
                 .total-amount {
                     font-size: 24px;
                     font-weight: 700;
-                    color: #DC143C;
+                    color: #111827;
                 }
                 .footer { 
                     text-align: center; 
@@ -280,7 +285,7 @@ class EmailService
                         </div>
                     </div>
                     <div class='footer'>
-                        <p class='brand'>Gulf United FC - Academy Store</p>
+                        <p class='brand'>" . htmlspecialchars(self::brandName()) . "</p>
                         {$contactLine}
                         <p style='margin-top: 16px; color: #78716c; font-size: 11px;'>This is an automated email. Please do not reply directly.</p>
                     </div>
@@ -309,18 +314,12 @@ class EmailService
         
         $paymentMethodDisplay = ucwords(str_replace('_', ' ', $order['payment_method']));
         $statusBadgeColor = $order['status'] === 'completed' ? '#10b981' : ($order['status'] === 'paid' ? '#3b82f6' : '#eab308');
-        $paymentStatusBadgeColor = $order['payment_status'] === 'completed' ? '#10b981' : ($order['payment_status'] === 'pending' ? '#eab308' : '#DC143C');
+        $paymentStatusBadgeColor = $order['payment_status'] === 'completed' ? '#10b981' : ($order['payment_status'] === 'pending' ? '#eab308' : '#ef4444');
         
         $playerInfo = '';
-        if (!empty($order['player_name'])) {
-            $playerInfo .= "<div class='info-row'><strong>Player Name:</strong> {$order['player_name']}</div>";
-            if (!empty($order['player_date_of_birth'])) {
-                $dob = date('F j, Y', strtotime($order['player_date_of_birth']));
-                $playerInfo .= "<div class='info-row'><strong>Player DOB:</strong> {$dob}</div>";
-            }
-            if (!empty($order['trial_coach_name'])) {
-                $playerInfo .= "<div class='info-row'><strong>Trial Coach:</strong> {$order['trial_coach_name']}</div>";
-            }
+        $shippingAddress = Order::formatShippingAddress($order);
+        if ($shippingAddress !== '') {
+            $playerInfo = "<div class='info-row'><strong>Shipping Address:</strong> " . htmlspecialchars($shippingAddress) . "</div>";
         }
         
         return "
@@ -352,7 +351,7 @@ class EmailService
                     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
                 }
                 .header { 
-                    background: linear-gradient(135deg, rgba(220, 20, 60, 0.9) 0%, rgba(0, 51, 102, 0.9) 100%);
+                    background: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(55, 65, 81, 0.9) 100%);
                     padding: 32px 24px;
                     text-align: center;
                 }
@@ -432,7 +431,7 @@ class EmailService
                 }
                 .btn {
                     display: inline-block;
-                    background: linear-gradient(135deg, #DC143C 0%, #b01030 100%);
+                    background: linear-gradient(135deg, #111827 0%, #374151 100%);
                     color: #ffffff;
                     padding: 12px 24px;
                     text-decoration: none;
@@ -442,7 +441,7 @@ class EmailService
                     transition: all 0.3s ease;
                 }
                 .btn:hover {
-                    background: linear-gradient(135deg, #b01030 0%, #DC143C 100%);
+                    background: linear-gradient(135deg, #374151 0%, #111827 100%);
                 }
                 .footer { 
                     text-align: center; 
@@ -468,7 +467,7 @@ class EmailService
                         <div class='card'>
                             <h2>Customer Information</h2>
                             <div class='info-row'><strong>Name:</strong> {$order['guest_name']}</div>
-                            <div class='info-row'><strong>Email:</strong> <a href='mailto:{$order['guest_email']}' style='color: #DC143C; text-decoration: none;'>{$order['guest_email']}</a></div>
+                            <div class='info-row'><strong>Email:</strong> <a href='mailto:{$order['guest_email']}' style='color: #111827; text-decoration: none; font-weight: 600;'>{$order['guest_email']}</a></div>
                             <div class='info-row'><strong>Phone:</strong> {$order['guest_phone']}</div>
                             {$playerInfo}
                         </div>
@@ -492,7 +491,7 @@ class EmailService
                         
                         <div class='card'>
                             <h2>Order Summary</h2>
-                            <div class='info-row'><strong>Total Amount:</strong> <span style='color: #DC143C; font-size: 20px; font-weight: 700;'>{$order['currency']} " . number_format($order['total_amount'], 2) . "</span></div>
+                            <div class='info-row'><strong>Total Amount:</strong> <span style='color: #111827; font-size: 20px; font-weight: 700;'>{$order['currency']} " . number_format($order['total_amount'], 2) . "</span></div>
                             <div class='info-row'><strong>Payment Method:</strong> {$paymentMethodDisplay}</div>
                             <div class='info-row'><strong>Order Status:</strong> <span class='status-badge'>{$order['status']}</span></div>
                             <div class='info-row'><strong>Payment Status:</strong> <span class='payment-status-badge'>{$order['payment_status']}</span></div>
@@ -500,7 +499,7 @@ class EmailService
                         </div>
                     </div>
                     <div class='footer'>
-                        <p>Gulf United FC - Academy Store</p>
+                        <p>" . htmlspecialchars(self::brandName()) . "</p>
                         <p style='color: #78716c; font-size: 11px;'>This is an automated notification email.</p>
                     </div>
                 </div>
@@ -510,9 +509,22 @@ class EmailService
     }
     
     /**
+     * Send a customer contact / help message to staff (success page, bank transfer page).
+     */
+    public static function sendStaffContactEmail(
+        string $staffEmail,
+        string $subject,
+        string $message,
+        string $replyToEmail = '',
+        string $replyToName = ''
+    ): bool {
+        return self::sendEmail($staffEmail, $subject, $message, $replyToEmail, $replyToName);
+    }
+
+    /**
      * Send email using configured SMTP settings
      */
-    private static function sendEmail(string $to, string $subject, string $message, string $toName = ''): bool
+    private static function sendEmail(string $to, string $subject, string $message, string $replyToEmail = '', string $replyToName = ''): bool
     {
         // Get email settings
         $smtpHost = Setting::get('email_host', '');
@@ -537,13 +549,18 @@ class EmailService
             }
         }
         
+        $replyTo = !empty($replyToEmail) ? $replyToEmail : $smtpFromEmail;
+        $replyToHeader = !empty($replyToName) && !empty($replyToEmail)
+            ? "{$replyToName} <{$replyToEmail}>"
+            : $replyTo;
+
         // If SMTP not configured, use PHP mail()
         if (empty($smtpHost) || empty($smtpUsername) || empty($smtpPassword)) {
             $headers = [
                 "MIME-Version: 1.0",
                 "Content-type: text/html; charset=UTF-8",
                 "From: {$smtpFromName} <{$smtpFromEmail}>",
-                "Reply-To: {$smtpFromEmail}",
+                "Reply-To: {$replyToHeader}",
                 "X-Mailer: PHP/" . phpversion()
             ];
             
@@ -556,7 +573,7 @@ class EmailService
             "MIME-Version: 1.0",
             "Content-type: text/html; charset=UTF-8",
             "From: {$smtpFromName} <{$smtpFromEmail}>",
-            "Reply-To: {$smtpFromEmail}",
+            "Reply-To: {$replyToHeader}",
             "X-Mailer: PHP/" . phpversion()
         ];
         

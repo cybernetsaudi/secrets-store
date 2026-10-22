@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { Product } from '@/lib/api'
+import { getApiUrl, getImageUrl } from '@/lib/utils'
+import { useProductPlaceholders } from '@/contexts/ProductPlaceholderContext'
 
 interface SearchBarProps {
   onClose?: () => void
@@ -17,6 +19,7 @@ export default function SearchBar({ onClose, mobile = false }: SearchBarProps) {
   const [loading, setLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const { resolveImage } = useProductPlaceholders()
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
@@ -68,7 +71,7 @@ export default function SearchBar({ onClose, mobile = false }: SearchBarProps) {
 
     setLoading(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+      const apiUrl = getApiUrl()
       const response = await fetch(`${apiUrl}/products?search=${encodeURIComponent(searchQuery)}`)
       if (response.ok) {
         const data = await response.json()
@@ -175,7 +178,7 @@ export default function SearchBar({ onClose, mobile = false }: SearchBarProps) {
                 {results.length} result{results.length !== 1 ? 's' : ''} found
               </div>
                 {results.slice(0, 5).map((product) => {
-                  const primaryImage = product.images?.find((img) => img.is_primary) || product.images?.[0]
+                  const { src: imageSrc } = resolveImage(product)
                   return (
                     <button
                       key={product.id}
@@ -183,15 +186,13 @@ export default function SearchBar({ onClose, mobile = false }: SearchBarProps) {
                       className="w-full text-left px-4 py-3 hover:bg-stone-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-inset flex items-center gap-3"
                       role="option"
                     >
-                      {primaryImage && (
-                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-stone-700">
-                          <img
-                            src={(primaryImage.image ?? primaryImage.url ?? '').startsWith('http') ? (primaryImage.image ?? primaryImage.url ?? '') : `https://secrets.gatvia.com${primaryImage.image ?? primaryImage.url ?? ''}`}
-                            alt={primaryImage.alt_text || product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
+                      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-stone-700">
+                        <img
+                          src={getImageUrl(imageSrc)}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-white truncate">{product.name}</div>
                         {product.short_description && (
@@ -243,7 +244,6 @@ export default function SearchBar({ onClose, mobile = false }: SearchBarProps) {
     </div>
   )
 }
-
 
 
 

@@ -1,23 +1,17 @@
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
 
-export type Currency = 'AED' | 'USD' | 'EUR' | 'GBP' | 'SAR' | 'QAR' | 'BHD' | 'KWD' | 'OMR'
+/** Storefront + cart currencies (PKR default; others for display conversion) */
+export type Currency = 'PKR' | 'AED' | 'USD' | 'GBP' | 'SAR'
 
-export const SUPPORTED_CURRENCIES: Currency[] = [
-  'AED',
-  'USD',
-  'EUR',
-  'GBP',
-  'SAR',
-  'QAR',
-  'BHD',
-  'KWD',
-  'OMR',
-]
+export const SUPPORTED_CURRENCIES: Currency[] = ['PKR', 'AED', 'USD', 'SAR', 'GBP']
 
-export function formatCurrency(amount: number, currency: Currency): string {
+/** Admin product pricing currencies */
+export const PRODUCT_CURRENCIES: Currency[] = ['PKR', 'AED', 'USD', 'SAR', 'GBP']
+
+export function formatCurrency(amount: number, currency: Currency | string): string {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
-    currency,
+    currency: String(currency),
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount)

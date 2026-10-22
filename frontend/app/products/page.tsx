@@ -7,9 +7,21 @@ import ProductFilters, { FilterState } from '@/components/ProductFilters'
 import { getProducts, Product } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
+import { getApiUrl } from '@/lib/utils'
+import {
+  COLLECTION_LIST,
+  CollectionId,
+  filterProductsByCollection,
+  parseCollectionId,
+} from '@/lib/collections'
+import { findCategoryLabel } from '@/lib/categories'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export default function ProductsPage() {
   const searchParams = useSearchParams()
+  const { theme } = useTheme()
+  const collectionParam = parseCollectionId(searchParams.get('collection'))
+  const categoryParam = searchParams.get('category') || ''
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -53,7 +65,10 @@ export default function ProductsPage() {
         setAllProducts(data)
         // Set initial price range based on actual products
         if (data.length > 0) {
-          const prices = data.map((p) => parseFloat(p.base_price)).filter(p => !isNaN(p))
+          const pool = collectionParam
+            ? filterProductsByCollection(data, collectionParam)
+            : data
+          const prices = pool.map((p) => parseFloat(p.base_price)).filter((p) => !isNaN(p))
           if (prices.length > 0) {
             const minPrice = Math.min(...prices)
             const maxPrice = Math.max(...prices)
@@ -126,9 +141,22 @@ export default function ProductsPage() {
     console.log('Filtering products with filters:', filters)
     let filtered = [...allProducts]
 
-    // Price filter - only apply if range excludes some products
-    // Calculate actual price range from products
-    const prices = allProducts.map((p) => parseFloat(p.base_price)).filter(p => !isNaN(p))
+    if (collectionParam) {
+      filtered = filterProductsByCollection(filtered, collectionParam)
+    }
+
+    if (categoryParam) {
+      const cat = categoryParam.toLowerCase().trim()
+      filtered = filtered.filter(
+        (p) => (p.product_category || '').toLowerCase().trim() === cat
+      )
+    }
+
+    // Price filter — base range on collection-scoped pool when a line is selected
+    const pricePool = collectionParam
+      ? filterProductsByCollection(allProducts, collectionParam)
+      : allProducts
+    const prices = pricePool.map((p) => parseFloat(p.base_price)).filter((p) => !isNaN(p))
     
     if (prices.length > 0) {
       const actualMinPrice = Math.min(...prices)
@@ -231,7 +259,7 @@ export default function ProductsPage() {
 
     console.log('Final filtered products count:', filtered.length, 'out of', allProducts.length)
     return filtered
-  }, [allProducts, filters])
+  }, [allProducts, filters, collectionParam, categoryParam])
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -269,7 +297,7 @@ export default function ProductsPage() {
   useEffect(() => {
     const fetchVisualSettings = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+        const apiUrl = getApiUrl()
         const response = await fetch(`${apiUrl}/settings/visual`)
         if (response.ok) {
           const data = await response.json()
@@ -288,83 +316,41 @@ export default function ProductsPage() {
     fetchVisualSettings()
   }, [])
 
-  // Use API image if available, otherwise use default
-  const productsBgImage = visualSettings?.products_bg_image_url || defaultHeroBgImage
-  // Build filter CSS string from settings
-  const productsBgFilter = `contrast(${visualSettings?.products_bg_contrast ?? 1}) saturate(${visualSettings?.products_bg_saturation ?? 1}) brightness(${visualSettings?.products_bg_brightness ?? 0.7})`
-
   return (
-    <div className="min-h-screen bg-gray-900 text-white antialiased overflow-x-hidden relative" style={{ paddingTop: '3%' }}>
-      {/* Full-screen background image - matching landing page */}
-      <div 
-        className="fixed top-0 left-0 w-full h-screen overflow-hidden"
-        style={{
-          ...(productsBgImage ? {
-            backgroundImage: `url(${productsBgImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            filter: productsBgFilter,
-          } : {}),
-          zIndex: 0,
-        }}
-      >
-        {/* Base gradient - very light so image shows through */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 via-[#003366]/30 to-gray-900/60"></div>
-        {/* Colored overlay for vectorized sharp effect - very light */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(220, 20, 60, 0.15) 0%, rgba(0, 51, 102, 0.15) 100%)',
-          }}
-        />
-        {/* Minimal overlay so background image is CLEARLY VISIBLE */}
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900/25 via-gray-900/15 to-gray-900/25"></div>
-      </div>
-
-      {/* Main Content Section */}
-      <main id="main-content" className="relative pb-20 md:pb-32 px-6" style={{ zIndex: 1 }}>
+    <div className="antialiased theme-page min-h-screen relative">
+      <main id="main-content" className="relative z-10 px-6 lg:px-12 py-12">
         <motion.div
           initial="hidden"
           animate="visible"
           variants={containerVariants}
           className="max-w-7xl mx-auto"
         >
-          {/* Hero Header Card - matching landing page style */}
+          {/* Page Header */}
           <motion.div
             variants={itemVariants}
-            className="md:rounded-[40px] md:p-16 lg:p-24 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl mb-12"
+            className="mb-12"
           >
             <div className="text-center">
-              {/* Player avatars badge */}
-              <motion.div
-                variants={itemVariants}
-                className="flex items-center justify-center bg-stone-700/50 rounded-full pl-4 pr-6 py-2 w-max mx-auto mb-8"
-              >
-                <div className="flex -space-x-3">
-                  <div className="w-8 h-8 rounded-full border-2 border-stone-600 bg-gradient-to-br from-[#DC143C] to-[#003366] flex items-center justify-center text-xs font-bold text-white">GU</div>
-                  <div className="w-8 h-8 rounded-full border-2 border-stone-600 bg-gradient-to-br from-[#003366] to-[#DC143C] flex items-center justify-center text-xs font-bold text-white">FC</div>
-                  <div className="w-8 h-8 rounded-full border-2 border-stone-600 bg-stone-700 flex items-center justify-center text-xs font-bold text-white">U5</div>
-                  <div className="w-8 h-8 rounded-full border-2 border-stone-600 bg-stone-600 flex items-center justify-center text-xs font-bold text-white">U10</div>
-                  <div className="w-8 h-8 rounded-full border-2 border-stone-600 bg-stone-500 flex items-center justify-center text-xs font-bold text-white">U21</div>
-                </div>
-                <span className="ml-4 text-sm font-medium text-stone-200">
-                  <span className="font-semibold text-white">{allProducts.length}+</span> programs available
-                </span>
-              </motion.div>
-
               <motion.h1
                 variants={itemVariants}
-                className="sm:text-5xl lg:text-7xl leading-tight text-4xl tracking-tight mt-2 mb-2 font-semibold"
+                className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4"
               >
-                Join the Eagles!
+                {collectionParam && categoryParam && findCategoryLabel(collectionParam, categoryParam)
+                  ? findCategoryLabel(collectionParam, categoryParam)
+                  : collectionParam
+                    ? theme.name
+                    : 'Shop All'}
               </motion.h1>
 
               <motion.p
                 variants={itemVariants}
-                className="text-base sm:text-lg max-w-2xl mx-auto mt-6 text-stone-200"
+                className="text-base md:text-lg max-w-2xl mx-auto theme-muted"
               >
-                Please select below based on age group and sessions per week. If you have any questions, please don&apos;t hesitate to contact your coach.
+                {collectionParam && categoryParam && findCategoryLabel(collectionParam, categoryParam)
+                  ? findCategoryLabel(collectionParam, categoryParam)
+                  : collectionParam
+                    ? theme.tagline
+                    : 'Browse every GATVIA line — Classic, Premium, Designer & Limited Edition'}
               </motion.p>
             </div>
           </motion.div>
@@ -374,12 +360,10 @@ export default function ProductsPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="md:rounded-[40px] md:p-16 lg:p-24 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl"
+              className="py-20 text-center"
             >
-              <div className="py-20 text-center">
-                <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-stone-600 border-t-[#DC143C]"></div>
-                <p className="mt-6 text-stone-200 text-lg">Loading products...</p>
-              </div>
+              <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-gray-300 border-t-gray-900"></div>
+              <p className="mt-6 text-gray-600 text-lg">Loading products...</p>
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:gap-8">
@@ -396,7 +380,7 @@ export default function ProductsPage() {
                   <>
                     {filters.ageGroups.length > 0 || filters.priceRange[0] > 0 || filters.priceRange[1] < 10000 ? (
                       <div className="mb-6 text-center lg:text-left">
-                        <p className="text-stone-200">
+                        <p className="text-gray-600">
                           Showing {products.length} of {allProducts.length} products
                         </p>
                       </div>
@@ -419,28 +403,32 @@ export default function ProductsPage() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="md:rounded-[40px] md:p-16 lg:p-24 overflow-hidden bg-stone-800/50 border-stone-700/50 border rounded-b-3xl pt-8 pr-8 pb-8 pl-8 backdrop-blur-3xl"
+                    className="py-20 text-center"
                   >
-                    <div className="py-20 text-center">
-                      <div className="inline-block p-8 bg-stone-700/30 rounded-2xl backdrop-blur-sm border border-stone-600/50">
-                        <p className="text-stone-200 text-lg mb-4">No products match your filters.</p>
-                        <button
-                          onClick={() => {
-                            const prices = allProducts.map((p) => parseFloat(p.base_price))
-                            const minPrice = prices.length > 0 ? Math.min(...prices) : 0
-                            const maxPrice = prices.length > 0 ? Math.max(...prices) : 10000
-                            setFilters({
-                              priceRange: [minPrice, maxPrice] as [number, number],
-                              ageGroups: [],
-                              sortBy: 'newest',
-                              search: '',
-                            })
-                          }}
-                          className="text-[#DC143C] hover:text-[#b01030] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 focus:ring-offset-stone-800 rounded px-2"
-                        >
-                          Clear Filters
-                        </button>
-                      </div>
+                    <div className="inline-block p-8 bg-gray-50 rounded-2xl border border-gray-200">
+                      <p className="text-gray-900 text-lg mb-2">No products match your filters.</p>
+                      {categoryParam && collectionParam && (
+                        <p className="text-gray-500 text-sm mb-4 max-w-md mx-auto">
+                          Products in this category need a <strong>Product Category</strong> assigned in Admin → Products.
+                          Classic line items are often still untagged.
+                        </p>
+                      )}
+                      <button
+                        onClick={() => {
+                          const prices = allProducts.map((p) => parseFloat(p.base_price))
+                          const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+                          const maxPrice = prices.length > 0 ? Math.max(...prices) : 10000
+                          setFilters({
+                            priceRange: [minPrice, maxPrice] as [number, number],
+                            ageGroups: [],
+                            sortBy: 'newest',
+                            search: '',
+                          })
+                        }}
+                        className="text-[#DC143C] hover:text-[#b01030] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#DC143C] focus:ring-offset-2 rounded px-2"
+                      >
+                        Clear Filters
+                      </button>
                     </div>
                   </motion.div>
                 )}
@@ -452,7 +440,6 @@ export default function ProductsPage() {
     </div>
   )
 }
-
 
 
 

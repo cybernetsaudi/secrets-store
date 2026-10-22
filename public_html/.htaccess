@@ -4,8 +4,16 @@
 RewriteEngine On
 RewriteBase /
 
+# Bare /admin path — directory exists but has no index.html (would 403)
+RewriteRule ^admin/?$ /admin/login/ [R=302,L]
+
 # CRITICAL: API routes MUST come first, before any other rules
-# Route all /api/* requests to api/index.php (except uploads which are served directly)
+# Serve /api/uploads/* as static files when present (fast — avoids PHP per image)
+RewriteCond %{REQUEST_URI} ^/api/uploads/
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Fallback PHP handler for upload paths (legacy)
 RewriteCond %{REQUEST_URI} ^/api/uploads/
 RewriteRule ^api/uploads/(.*)$ api/uploads/index.php [QSA,L]
 

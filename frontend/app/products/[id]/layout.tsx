@@ -1,10 +1,11 @@
 // Server component wrapper to generate static params
-// For static export, we MUST return at least one param to ensure the route is registered.
-// The actual product data is fetched client-side, but we still prebuild pages for all
-// known product IDs at build time for faster initial load.
+// For static export, we MUST return at least one param to ensure the route is registered
+// The actual product data is fetched client-side, so any product ID will work
+// We generate a template page with a placeholder ID, then all IDs work via client-side routing
 export async function generateStaticParams() {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
+    // Use environment variable or default - server-side, so we can't use window.location
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://gatvia.pk/api'
     const response = await fetch(`${apiUrl}/products`, { 
       cache: 'no-store',
       headers: {
@@ -14,6 +15,7 @@ export async function generateStaticParams() {
     
     if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
       // API not available - return a placeholder to ensure route is registered
+      // This ensures the route handler exists for client-side routing
       return [{ id: '1' }]
     }
     
@@ -25,13 +27,15 @@ export async function generateStaticParams() {
       return [{ id: '1' }]
     }
     
-    // Generate pages for existing products for better initial load.
+    // Generate pages for existing products for better initial load
+    // The page will work for ANY product ID via client-side routing, even if not listed here
     return products.map((product: any) => ({
       id: product.id.toString(),
     }))
   } catch (error) {
     console.error('Error generating static params:', error)
     // Return a placeholder to ensure route is registered
+    // This is critical - empty array means route won't exist in static export
     return [{ id: '1' }]
   }
 }

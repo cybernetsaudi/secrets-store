@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
 
+const TEST_SHIPPING = {
+  shipping_address_line1: '123 Test Street',
+  shipping_city: 'Karachi',
+  shipping_country: 'PK',
+}
+
 interface TestResult {
   name: string
   status: 'pending' | 'testing' | 'pass' | 'fail' | 'warning' | 'error'
@@ -361,7 +367,7 @@ export default function ComprehensiveTestPage() {
           formData.append('name', 'Test Product Update')
           formData.append('description', 'Test description')
           formData.append('base_price', '100')
-          formData.append('currency', 'AED')
+          formData.append('currency', 'PKR')
           formData.append('is_active', '1')
           formData.append('variants', JSON.stringify([]))
           formData.append('images', JSON.stringify([]))
@@ -405,7 +411,7 @@ export default function ComprehensiveTestPage() {
               name: 'Test Product Update',
               description: 'Test description',
               base_price: 100,
-              currency: 'AED',
+              currency: 'PKR',
               is_active: true,
               variants: [],
               images: []
@@ -659,9 +665,10 @@ export default function ComprehensiveTestPage() {
               guest_name: 'Test User',
               guest_email: 'test@test.com',
               guest_phone: '1234567890',
+              ...TEST_SHIPPING,
               items: [{ product_id: 1, variant_id: 1, quantity: 1 }],
               payment_method: 'bank_transfer',
-              currency: 'AED',
+              currency: 'PKR',
               no_refund_accepted: true
             })
           })
