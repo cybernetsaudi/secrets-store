@@ -458,8 +458,10 @@ export default function DeployPage() {
             <div><span className="text-yellow-400">SSH_HOST</span>  = u950050130@145.79.209.14</div>
             <div><span className="text-yellow-400">SSH_PORT</span>  = 65002</div>
             <div><span className="text-yellow-400">SSH_PASS</span>  = Hostinger SSH password</div>
-            <div><span className="text-yellow-400">FTP_PASS</span>  = Hostinger FTP password (hPanel → FTP Accounts; fixes 530 login errors)</div>
-            <div><span className="text-yellow-400">FTP_REMOTE_ROOT</span> = domains/secrets.gatvia.com/public_html (optional)</div>
+            <div><span className="text-yellow-400">FTP_HOST</span>  = 141.136.39.245</div>
+            <div><span className="text-yellow-400">FTP_USER</span>  = u950050130.secrets.gatvia.com</div>
+            <div><span className="text-yellow-400">FTP_PASS</span>  = Hostinger FTP password (hPanel → FTP Access)</div>
+            <div><span className="text-yellow-400">FTP_REMOTE_ROOT</span> = public_html</div>
             <div><span className="text-yellow-400">NEXT_PUBLIC_API_URL</span> = https://secrets.gatvia.com/api</div>
             <div><span className="text-yellow-400">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</span> = pk_live_...</div>
           </div>

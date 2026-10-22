@@ -57,9 +57,9 @@ Deploy uses **FTPS** via `SamKirkland/FTP-Deploy-Action` (GitHub runners cannot 
 
 Optional secrets (if not using `SSH_HOST=u950050130@145.79.209.14`):
 
-- `FTP_HOST` — `145.79.209.14` or `ftp.secrets.gatvia.com`
-- `FTP_USER` — `u950050130`
-- `FTP_REMOTE_ROOT` — `domains/secrets.gatvia.com/public_html`
+- `FTP_HOST` — `141.136.39.245` (from hPanel FTP Access)
+- `FTP_USER` — `u950050130.secrets.gatvia.com`
+- `FTP_REMOTE_ROOT` — `public_html`
 
 ## Admin panel deploy token
 

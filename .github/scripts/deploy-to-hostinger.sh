@@ -9,7 +9,7 @@ SSH_HOST="${SSH_HOST:-}"
 SSH_PORT="${SSH_PORT:-65002}"
 SSH_PASS="${SSH_PASS:-}"
 REMOTE_ROOT="${REMOTE_ROOT:-/home/u950050130/domains/secrets.gatvia.com/public_html}"
-FTP_REMOTE_ROOT="${FTP_REMOTE_ROOT:-domains/secrets.gatvia.com/public_html}"
+FTP_REMOTE_ROOT="${FTP_REMOTE_ROOT:-public_html}"
 
 FTP_HOST="${FTP_HOST:-}"
 FTP_USER="${FTP_USER:-}"

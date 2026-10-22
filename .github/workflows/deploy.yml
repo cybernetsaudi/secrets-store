@@ -75,7 +75,7 @@ jobs:
             USER="${SSH_HOST%@*}"
             HOST="${SSH_HOST#*@}"
           fi
-          REMOTE="${FTP_REMOTE_ROOT:-domains/secrets.gatvia.com/public_html}"
+          REMOTE="${FTP_REMOTE_ROOT:-public_html}"
           echo "::add-mask::${DEPLOY_PASS}"
           echo "FTP_DEPLOY_PASSWORD=${DEPLOY_PASS}" >> "$GITHUB_ENV"
           echo "FTP_HOST=${HOST}" >> "$GITHUB_ENV"
