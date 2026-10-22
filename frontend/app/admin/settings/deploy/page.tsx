@@ -161,6 +161,7 @@ export default function DeployPage() {
   // Token management
   const [tokenInput, setTokenInput] = useState('')
   const [savingToken, setSavingToken] = useState(false)
+  const [migratingDb, setMigratingDb] = useState(false)
   const [showTokenSection, setShowTokenSection] = useState(false)
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://secrets.gatvia.com/api'
@@ -261,6 +262,30 @@ export default function DeployPage() {
   }
 
   // ── Save GitHub token ────────────────────────────────────────────────────────
+  const handleRunMigrations = async () => {
+    setMigratingDb(true)
+    try {
+      const meRes = await fetch(`${apiUrl}/admin/me`, { credentials: 'include' })
+      const meData = await meRes.json()
+      const csrfToken = meData.csrf_token
+      const res = await fetch(`${apiUrl}/admin/deploy/migrate-db`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': csrfToken || '' },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.success) {
+        toast.success('Database migration completed.')
+      } else {
+        toast.error(data.error || 'Migration failed')
+      }
+    } catch {
+      toast.error('Network error running migration')
+    } finally {
+      setMigratingDb(false)
+    }
+  }
+
   const handleSaveToken = async () => {
     if (!tokenInput.trim()) {
       toast.error('Please enter a GitHub token')
@@ -437,6 +462,21 @@ export default function DeployPage() {
             <div><span className="text-yellow-400">NEXT_PUBLIC_API_URL</span> = https://secrets.gatvia.com/api</div>
             <div><span className="text-yellow-400">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</span> = pk_live_...</div>
           </div>
+        </div>
+
+        <div className="bg-stone-800/30 border border-stone-700/30 rounded-lg p-4 mb-4">
+          <h2 className="text-sm font-semibold mb-2 text-white">🗄️ After FTPS deploy</h2>
+          <p className="text-stone-400 text-xs mb-3">
+            GitHub cannot SSH into Hostinger. After a successful build, run the variant DB migration once (safe to repeat).
+          </p>
+          <button
+            type="button"
+            onClick={handleRunMigrations}
+            disabled={migratingDb}
+            className="px-4 py-2 bg-stone-700 hover:bg-stone-600 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+          >
+            {migratingDb ? 'Running migration…' : 'Run DB migration'}
+          </button>
         </div>
 
         {/* GitHub Token section */}
