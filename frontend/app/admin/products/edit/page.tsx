@@ -127,6 +127,11 @@ export default function EditProductPage() {
             option_size: v.option_size || '',
             option_cup: v.option_cup || '',
             swatch_image: v.swatch_image || '',
+            stock_quantity:
+              v.stock_quantity !== null && v.stock_quantity !== undefined
+                ? String(v.stock_quantity)
+                : '10',
+            is_unlimited: v.is_unlimited === 1 || v.is_unlimited === true,
           })) || [],
           images: product.images?.map((img: any) => {
             // Backend returns `image` column; normalise to `url` for the form

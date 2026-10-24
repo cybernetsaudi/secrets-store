@@ -160,6 +160,87 @@ export type AdminVariantDraft = {
   option_size: string
   option_cup: string
   swatch_image: string
+  stock_quantity: string
+  is_unlimited: boolean
+}
+
+export const PRESET_SIZES = ['30', '32', '34', '36', '38', '40', '42']
+export const PRESET_CUPS = ['B', 'C', 'D', 'DD']
+
+export function skuKey(color: string, size: string, cup: string): string {
+  return `${color.trim()}|${size.trim()}|${cup.trim()}`.toLowerCase()
+}
+
+/** Rebuild SKU rows from selected options; keep ids/stock for matching combinations. */
+export function mergeSkuMatrix(
+  colors: Array<{ name: string; swatch_image: string }>,
+  sizes: string[],
+  cups: string[],
+  existing: AdminVariantDraft[],
+  options?: { useCupSizes?: boolean }
+): AdminVariantDraft[] {
+  const sizeList = sizes.length ? sizes : []
+  if (!colors.length || !sizeList.length) {
+    return existing
+  }
+  const cupList =
+    options?.useCupSizes && cups.length ? cups : ['']
+  const generated = cartesianSkus(colors, sizeList, cupList)
+  const byKey = new Map<string, AdminVariantDraft>()
+  for (const row of existing) {
+    byKey.set(skuKey(row.option_color, row.option_size, row.option_cup), row)
+  }
+  return generated.map((row) => {
+    const prev = byKey.get(skuKey(row.option_color, row.option_size, row.option_cup))
+    if (prev) {
+      return {
+        ...row,
+        id: prev.id,
+        name: buildVariantDisplayName(row.option_color, row.option_size, row.option_cup),
+        price_modifier: prev.price_modifier,
+        is_active: prev.is_active,
+        stock_quantity: prev.stock_quantity,
+        is_unlimited: prev.is_unlimited,
+        description: prev.description,
+      }
+    }
+    return {
+      ...row,
+      stock_quantity: '10',
+      is_unlimited: false,
+      is_active: true,
+    }
+  })
+}
+
+export function variantsToMatrixState(variants: AdminVariantDraft[]): {
+  colors: Array<{ name: string; swatch_image: string }>
+  sizes: string[]
+  cups: string[]
+  useCupSizes: boolean
+} {
+  const colorMap = new Map<string, string>()
+  const sizes = new Set<string>()
+  const cups = new Set<string>()
+  for (const v of variants) {
+    const c = v.option_color?.trim()
+    if (c) {
+      if (!colorMap.has(c)) colorMap.set(c, v.swatch_image?.trim() || '')
+    }
+    const s = v.option_size?.trim()
+    if (s) sizes.add(s)
+    const u = v.option_cup?.trim()
+    if (u) cups.add(u)
+  }
+  return {
+    colors: Array.from(colorMap.entries()).map(([name, swatch_image]) => ({
+      name,
+      swatch_image,
+    })),
+    sizes: Array.from(sizes).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+    cups: Array.from(cups).sort(),
+    useCupSizes: cups.size > 0,
+  }
 }
 
 export function cartesianSkus(
@@ -188,6 +269,8 @@ export function cartesianSkus(
           option_size: s,
           option_cup: u,
           swatch_image: color.swatch_image.trim(),
+          stock_quantity: '10',
+          is_unlimited: false,
         })
       }
     }

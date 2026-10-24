@@ -46,8 +46,8 @@ class ProductVariant
         if ($columns['dimensions']) {
             Database::query(
                 "INSERT INTO product_variants 
-                 (product_id, name, option_color, option_size, option_cup, swatch_image, description, price_modifier, is_active, display_order) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 (product_id, name, option_color, option_size, option_cup, swatch_image, description, price_modifier, stock_quantity, is_unlimited, is_active, display_order) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $data['product_id'],
                     $data['name'],
@@ -57,6 +57,8 @@ class ProductVariant
                     $data['swatch_image'] ?? null,
                     $data['description'] ?? null,
                     $data['price_modifier'] ?? 0,
+                    array_key_exists('stock_quantity', $data) ? $data['stock_quantity'] : null,
+                    ($data['is_unlimited'] ?? true) ? 1 : 0,
                     ($data['is_active'] ?? true) ? 1 : 0,
                     $data['display_order'] ?? 0,
                 ]
@@ -138,6 +140,15 @@ class ProductVariant
                 $updates[] = "swatch_image = ?";
                 $params[] = $data['swatch_image'];
             }
+        }
+
+        if (array_key_exists('stock_quantity', $data)) {
+            $updates[] = "stock_quantity = ?";
+            $params[] = $data['stock_quantity'];
+        }
+        if (array_key_exists('is_unlimited', $data)) {
+            $updates[] = "is_unlimited = ?";
+            $params[] = $data['is_unlimited'] ? 1 : 0;
         }
         
         if (!empty($updates)) {

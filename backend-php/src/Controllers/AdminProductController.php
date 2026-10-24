@@ -153,6 +153,8 @@ class AdminProductController
                     'swatch_image' => $variantData['swatch_image'] ?? null,
                     'description' => $variantData['description'] ?? null,
                     'price_modifier' => $variantData['price_modifier'] ?? 0,
+                    'stock_quantity' => $variantData['stock_quantity'] ?? null,
+                    'is_unlimited' => $variantData['is_unlimited'] ?? true,
                     'is_active' => $variantData['is_active'] ?? true,
                     'display_order' => $variantData['display_order'] ?? 0,
                 ]);
@@ -303,6 +305,8 @@ class AdminProductController
                             'swatch_image' => $variantData['swatch_image'] ?? null,
                             'description' => $variantData['description'] ?? null,
                             'price_modifier' => floatval($variantData['price_modifier'] ?? 0),
+                            'stock_quantity' => $variantData['stock_quantity'] ?? null,
+                            'is_unlimited' => $variantData['is_unlimited'] ?? true,
                             'is_active' => $variantData['is_active'] ?? true,
                             'display_order' => $variantData['display_order'] ?? $index,
                         ]);
@@ -319,6 +323,8 @@ class AdminProductController
                                 'swatch_image' => $variantData['swatch_image'] ?? null,
                                 'description' => $variantData['description'] ?? null,
                                 'price_modifier' => floatval($variantData['price_modifier'] ?? 0),
+                                'stock_quantity' => $variantData['stock_quantity'] ?? null,
+                                'is_unlimited' => $variantData['is_unlimited'] ?? true,
                                 'is_active' => $variantData['is_active'] ?? true,
                                 'display_order' => $variantData['display_order'] ?? $index,
                             ]);
@@ -344,6 +350,8 @@ class AdminProductController
                                         'swatch_image' => $variantData['swatch_image'] ?? null,
                                         'description' => $variantData['description'] ?? null,
                                         'price_modifier' => floatval($variantData['price_modifier'] ?? 0),
+                                        'stock_quantity' => $variantData['stock_quantity'] ?? null,
+                                        'is_unlimited' => $variantData['is_unlimited'] ?? true,
                                         'is_active' => $variantData['is_active'] ?? true,
                                         'display_order' => $variantData['display_order'] ?? $index,
                                     ]);

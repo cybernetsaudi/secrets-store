@@ -36,6 +36,13 @@ class VariantNormalizer
             }
             $seenKeys[$key] = true;
 
+            $isUnlimited = filter_var($variantData['is_unlimited'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $stockRaw = $variantData['stock_quantity'] ?? null;
+            $stockQty = null;
+            if (!$isUnlimited && $stockRaw !== null && $stockRaw !== '') {
+                $stockQty = max(0, (int) $stockRaw);
+            }
+
             $normalized[] = [
                 'id' => isset($variantData['id']) ? (int) $variantData['id'] : null,
                 'name' => $name,
@@ -47,6 +54,8 @@ class VariantNormalizer
                 'option_size' => $size !== '' ? $size : null,
                 'option_cup' => $cup !== '' ? $cup : null,
                 'swatch_image' => self::clean($variantData['swatch_image'] ?? '') ?: null,
+                'stock_quantity' => $stockQty,
+                'is_unlimited' => $isUnlimited,
             ];
         }
 
