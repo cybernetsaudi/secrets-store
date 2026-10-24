@@ -16,7 +16,8 @@
 
 set -euo pipefail
 
-SSH_HOST="${SSH_HOST:-u950050130@145.79.209.14}"
+# SSH must use the same Hostinger server as FTP (141.136.39.245). 145.79.209.14 rejects this account password.
+SSH_HOST="${SSH_HOST:-u950050130@141.136.39.245}"
 SSH_PORT="${SSH_PORT:-65002}"
 SSH_PASS="${SSH_PASS:-}"
 REMOTE_PATH="${REMOTE_PATH:-~/domains/secrets.gatvia.com/public_html}"

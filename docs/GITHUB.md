@@ -46,7 +46,7 @@ git remote set-url origin https://github.com/cybernetsaudi/secrets-store.git
 
 Set under **cybernetsaudi/secrets-store** → Settings → Secrets:
 
-- `SSH_HOST` — `u950050130@145.79.209.14`
+- `SSH_HOST` — `u950050130@141.136.39.245` (same server as FTP; port `65002`)
 - `SSH_PORT` — `65002`
 - `SSH_PASS` — Hostinger **SSH** password (local deploy / server token update)
 - **`FTP_PASS`** — Hostinger **FTP** password (hPanel → Files → FTP Accounts). **Required for Actions deploy** if it differs from SSH (common). Workflow uses `FTP_PASS` first, then falls back to `SSH_PASS`.

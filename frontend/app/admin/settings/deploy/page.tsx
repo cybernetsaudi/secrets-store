@@ -483,7 +483,7 @@ export default function DeployPage() {
             </a>:
           </p>
           <div className="font-mono text-xs bg-stone-900/50 rounded p-3 space-y-1 text-stone-300">
-            <div><span className="text-yellow-400">SSH_HOST</span>  = u950050130@145.79.209.14</div>
+            <div><span className="text-yellow-400">SSH_HOST</span>  = u950050130@141.136.39.245 (port 65002)</div>
             <div><span className="text-yellow-400">SSH_PORT</span>  = 65002</div>
             <div><span className="text-yellow-400">SSH_PASS</span>  = Hostinger SSH password</div>
             <div><span className="text-yellow-400">FTP_HOST</span>  = 141.136.39.245</div>

@@ -26,7 +26,7 @@ echo "Pushing main branch..."
 git push -u origin main
 
 echo "Setting GitHub Actions secrets..."
-gh secret set SSH_HOST --repo "$REPO" --body "u950050130@145.79.209.14"
+gh secret set SSH_HOST --repo "$REPO" --body "u950050130@141.136.39.245"
 gh secret set SSH_PORT --repo "$REPO" --body "65002"
 gh secret set SSH_PASS --repo "$REPO" --body "$SSH_PASS"
 gh secret set FTP_PASS --repo "$REPO" --body "$FTP_PASS"
