@@ -2,26 +2,33 @@
 
 E-commerce store for **https://secrets.gatvia.com** (Next.js static export + PHP API on Hostinger).
 
-## Deploy
+## GitHub account
 
-### GitHub Actions (recommended)
+| | |
+|---|---|
+| **Use** | [`cybernetsaudi`](https://github.com/cybernetsaudi) / [`secrets-store`](https://github.com/cybernetsaudi/secrets-store) |
+| **Do not use** | `iwaqasmaqbool` — not for this repo, PAT, or deploy |
 
-Admin panel → Settings → Deploy → Rebuild, or run the workflow manually:
+Full guide: [`docs/GITHUB.md`](docs/GITHUB.md)
 
-`Actions` → `Build and Deploy Store` → `Run workflow`
+## Operations (Option A)
 
-Required repository secrets: `SSH_HOST`, `SSH_PORT`, `SSH_PASS`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (optional).
+**Products:** edit in admin — **no deploy**. Catalog is API + database.
 
-**Note:** Hostinger often blocks SSH from GitHub’s cloud runners (connection timeout). If Actions deploy fails, use the local script below or add a [self-hosted runner](https://docs.github.com/en/actions/hosting-your-own-runners).
-
-Repository: https://github.com/cybernetsaudi/secrets-store
-
-### Local script
+**Code:** deploy from your Mac (runs QA before/after):
 
 ```bash
-export SSH_PASS='your-hostinger-password'
+export SSH_PASS='your-hostinger-ssh-password'
 ./scripts/deploy_secrets_gatvia.sh
 ```
+
+See [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+
+### GitHub Actions (optional backup)
+
+Manual workflow only — FTPS deploy when SSH script is unavailable. Not used for day-to-day catalog changes.
+
+Repository: **https://github.com/cybernetsaudi/secrets-store** (`cybernetsaudi` only)
 
 ## Stack
 

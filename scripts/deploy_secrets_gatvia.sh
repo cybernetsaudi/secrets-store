@@ -1,6 +1,9 @@
 #!/bin/bash
-# Deploy secrets-store to https://secrets.gatvia.com
+# Deploy secrets-store to https://secrets.gatvia.com (Option A — primary deploy path)
 # Usage: SSH_PASS='...' ./scripts/deploy_secrets_gatvia.sh
+#
+# Products/catalog: live from API — no rebuild when adding products.
+# This script is for CODE changes only. Runs local + production QA when possible.
 #
 # Post-deploy checklist (run on server via ssh when needed):
 #   cd ~/domains/secrets.gatvia.com/public_html/api
@@ -33,20 +36,18 @@ rsync_cmd() {
   sshpass -e rsync -avz -e "ssh -p $SSH_PORT -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no" "$@"
 }
 
-echo "Building frontend..."
-cd "$(dirname "$0")/../frontend"
-NEXT_PUBLIC_API_URL="$API_URL" npm run build
-cd ..
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+bash "$ROOT/scripts/qa_local.sh"
 
 echo "Deploying frontend..."
-rsync_cmd frontend/out/ "$SSH_HOST:$REMOTE_PATH/" \
+rsync_cmd "$ROOT/frontend/out/" "$SSH_HOST:$REMOTE_PATH/" \
   --exclude='api/' --exclude='.htaccess' --delete
 
 echo "Deploying .htaccess..."
-rsync_cmd public_html/.htaccess "$SSH_HOST:$REMOTE_PATH/.htaccess"
+rsync_cmd "$ROOT/public_html/.htaccess" "$SSH_HOST:$REMOTE_PATH/.htaccess"
 
 echo "Deploying API..."
-rsync_cmd backend-php/ "$SSH_HOST:$REMOTE_PATH/api/" \
+rsync_cmd "$ROOT/backend-php/" "$SSH_HOST:$REMOTE_PATH/api/" \
   --exclude='vendor' --exclude='.env' --exclude='.git' --exclude='*.md' --exclude='tests' \
   --exclude='uploads/'
 
@@ -63,4 +64,10 @@ else
   echo "Skipped repair_product_images.php (set REPAIR_PRODUCT_IMAGES=1 to auto-run)"
 fi
 
-echo "Done: https://secrets.gatvia.com/"
+echo "Running production QA..."
+if BASE_URL="${BASE_URL:-https://secrets.gatvia.com}" API_URL="$API_URL" bash "$ROOT/scripts/qa_production.sh"; then
+  echo "Done: https://secrets.gatvia.com/ (production QA passed)"
+else
+  echo "ERROR: Deploy uploaded but production QA failed — investigate before announcing release." >&2
+  exit 1
+fi

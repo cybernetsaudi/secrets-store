@@ -162,14 +162,17 @@ CSRF_ENABLED=true
 
 ### GitHub CLI auth (for setup scripts)
 
-The setup script expects you to be logged into GitHub CLI as a user with access to `cybernetsaudi`:
+**Only `cybernetsaudi`.** Do **not** use `iwaqasmaqbool` for secrets-store (git, PAT, Actions, admin deploy token).
 
 ```bash
-gh auth login -h github.com
-gh auth status   # should show cybernetsaudi access
+gh auth login -h github.com   # sign in as cybernetsaudi
+gh auth status              # must show cybernetsaudi
+git remote -v               # origin → github.com/cybernetsaudi/secrets-store.git
 ```
 
-> Setup script comment references account `iwaqasmaqbool` — use whichever GitHub user has push access to `cybernetsaudi/secrets-store`.
+**Reminder:** Secrets = `cybernetsaudi` only. Never `iwaqasmaqbool` for secrets.
+
+See `docs/GITHUB.md` and `.cursor/rules/secrets-github-account.mdc`.
 
 ### One-time GitHub Actions setup
 
@@ -177,7 +180,7 @@ Run from repo root after pushing code:
 
 ```bash
 cd /Users/waqas/secrets-store
-export SSH_PASS='!@#Acc3ss931!@#'
+export SSH_PASS='your-hostinger-password'
 # optional: export NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY='pk_live_...'
 ./scripts/setup_github_actions.sh
 ```
@@ -194,7 +197,7 @@ This script:
 |-------------|-------|
 | `SSH_HOST` | `u950050130@145.79.209.14` |
 | `SSH_PORT` | `65002` |
-| `SSH_PASS` | `!@#Acc3ss931!@#` |
+| `SSH_PASS` | Hostinger password (do not commit) |
 | `NEXT_PUBLIC_API_URL` | `https://secrets.gatvia.com/api` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (optional) |
 
@@ -203,7 +206,7 @@ Set manually if needed:
 ```bash
 gh secret set SSH_HOST --repo cybernetsaudi/secrets-store --body "u950050130@145.79.209.14"
 gh secret set SSH_PORT --repo cybernetsaudi/secrets-store --body "65002"
-gh secret set SSH_PASS --repo cybernetsaudi/secrets-store --body '!@#Acc3ss931!@#'
+gh secret set SSH_PASS --repo cybernetsaudi/secrets-store --body 'YOUR_HOSTINGER_PASSWORD'
 gh secret set NEXT_PUBLIC_API_URL --repo cybernetsaudi/secrets-store --body "https://secrets.gatvia.com/api"
 ```
 
@@ -505,7 +508,7 @@ Hostinger often **blocks SSH from GitHub cloud runners**. Use this when Actions 
 
 ```bash
 cd /Users/waqas/secrets-store
-export SSH_PASS='!@#Acc3ss931!@#'
+export SSH_PASS='your-hostinger-password'
 ./scripts/deploy_secrets_gatvia.sh
 ```
 
@@ -554,8 +557,8 @@ ls -la out/index.html
 
 **PHP-only deploy (no frontend rebuild):**
 ```bash
-export SSH_PASS='!@#Acc3ss931!@#'
-rsync -avz -e "sshpass -p '$SSH_PASS' ssh -p 65002 -o StrictHostKeyChecking=no" \
+export SSH_PASS='your-hostinger-password'
+rsync -avz -e "sshpass -e ssh -p 65002 -o StrictHostKeyChecking=no" \
   --exclude='vendor' --exclude='.env' --exclude='.git' \
   backend-php/ u950050130@145.79.209.14:~/domains/secrets.gatvia.com/public_html/api/
 
@@ -777,7 +780,7 @@ Use pk.gatvia.com as the **UI/UX reference** for:
 
 ```bash
 # Deploy
-export SSH_PASS='!@#Acc3ss931!@#'
+export SSH_PASS='your-hostinger-password'
 ./scripts/deploy_secrets_gatvia.sh
 
 # SSH to server

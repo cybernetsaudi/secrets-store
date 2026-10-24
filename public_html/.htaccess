@@ -26,6 +26,9 @@ RewriteCond %{REQUEST_URI} ^/?$
 RewriteCond %{DOCUMENT_ROOT}/index.html -f
 RewriteRule ^$ /index.html [L]
 
+# Product detail: one static shell (/products/0/); IDs load from API (no rebuild per product)
+RewriteRule ^products/[0-9]+/?$ /products/0/index.html [L]
+
 # If the request is for an existing file, serve it directly
 # This handles _next/ static assets, CSS, JS, images, etc.
 # (root index.html handled above)

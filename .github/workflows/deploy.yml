@@ -1,3 +1,6 @@
+# Optional backup deploy (FTPS). Primary path: ./scripts/deploy_secrets_gatvia.sh (SSH + QA).
+# Catalog changes do NOT require this workflow.
+
 name: Build and Deploy Store
 
 on:
@@ -126,7 +129,12 @@ jobs:
             **/tests/**
             **/*.md
 
+      - name: Production smoke QA
+        run: bash scripts/qa_production.sh
+        env:
+          BASE_URL: https://secrets.gatvia.com
+          API_URL: https://secrets.gatvia.com/api
+
       - name: Deployment complete
         run: |
-          echo "✅ secrets.gatvia.com deployment complete (FTPS)."
-          echo "Run DB migration once: Admin → Deploy → Run DB migration"
+          echo "✅ secrets.gatvia.com deployment complete (FTPS + QA passed)."

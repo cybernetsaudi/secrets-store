@@ -341,9 +341,18 @@ export default function DeployPage() {
         <div className="flex items-center gap-3 mb-6">
           <span className="text-3xl">🔁</span>
           <div>
-            <h1 className="text-2xl font-bold text-white">Rebuild Store</h1>
-            <p className="text-stone-400 text-sm">Powered by GitHub Actions — builds run on GitHub servers</p>
+            <h1 className="text-2xl font-bold text-white">Deploy code (optional)</h1>
+            <p className="text-stone-400 text-sm">Products update live from the database — no rebuild when you add items</p>
           </div>
+        </div>
+
+        <div className="bg-green-900/20 border border-green-600/40 rounded-xl p-5 mb-6">
+          <h2 className="text-sm font-semibold text-green-300 mb-2">✓ Catalog is live (Option A)</h2>
+          <p className="text-stone-300 text-sm">
+            Save products in <strong className="text-white">Products</strong> — they appear on the storefront immediately.
+            Deploy code only when developers change the app (from your machine:{' '}
+            <code className="text-xs bg-stone-900/60 px-1 rounded">./scripts/deploy_secrets_gatvia.sh</code>).
+          </p>
         </div>
 
         {/* Main deploy card */}
@@ -414,7 +423,7 @@ export default function DeployPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Rebuild &amp; Deploy Store
+                Deploy via GitHub Actions (backup)
               </>
             )}
           </button>
@@ -442,20 +451,19 @@ export default function DeployPage() {
         {/* Info cards */}
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="bg-stone-800/30 border border-stone-700/30 rounded-lg p-4">
-            <h2 className="text-sm font-semibold mb-2 text-white">📦 When to Rebuild</h2>
+            <h2 className="text-sm font-semibold mb-2 text-white">📦 When to deploy code</h2>
             <ul className="space-y-1 text-stone-300 text-sm">
-              <li>• After adding a new product</li>
-              <li>• After product route changes</li>
-              <li>• If a product page redirects to homepage</li>
+              <li>• UI, checkout, or admin layout changes</li>
+              <li>• PHP API logic changes</li>
+              <li>• <strong className="text-white">Not</strong> needed when adding/editing products</li>
             </ul>
           </div>
           <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4">
-            <h2 className="text-sm font-semibold mb-2 text-blue-300">🚀 How it Works</h2>
+            <h2 className="text-sm font-semibold mb-2 text-blue-300">🚀 Primary deploy (recommended)</h2>
             <ul className="space-y-1 text-stone-300 text-sm">
-              <li>• Triggers a GitHub Actions workflow</li>
-              <li>• GitHub builds Next.js + bundles PHP vendor</li>
-              <li>• Deploys via FTPS (Hostinger blocks GitHub SSH/rsync)</li>
-              <li>• Usually takes 4–6 minutes</li>
+              <li>• Mac: <code className="text-xs">SSH_PASS=… ./scripts/deploy_secrets_gatvia.sh</code></li>
+              <li>• Runs build + QA before and after upload</li>
+              <li>• GitHub Actions below is optional backup (FTPS)</li>
             </ul>
           </div>
         </div>
